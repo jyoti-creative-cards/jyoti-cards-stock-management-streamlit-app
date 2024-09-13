@@ -111,7 +111,7 @@ st.markdown('<h1 class="title">Jyoti Cards Stock Status</h1>', unsafe_allow_html
 # Dropdown for ITEM NO.
 item_no = st.selectbox('Select ITEM NO.', item_no_list, index=0)
 
-phone_number = "8952839355"
+phone_number = "07312456565"
 call_button = f'<a href="tel:{phone_number}" class="call-button">Call</a>'
 
 if item_no:
