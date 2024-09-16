@@ -56,12 +56,11 @@ st.markdown(
         background-color: #ffffff;
     }
     .title {
-        font-size: 2.5em;
+        font-size: 2.2em;
         color: #4e8cff;
         font-weight: bold;
         text-align: center;
-        margin-top: 0;
-        padding-top: 0;
+        margin-top: 1em;
     }
     .input {
         font-size: 1.25em;
@@ -133,13 +132,47 @@ st.markdown(
     .call-link img {
         margin-right: 8px;
     }
+    .last-updated {
+        font-size: 1.5em;
+        font-style: italic;
+        color: red;
+        animation: blink 1.5s infinite;  /* Blinking animation */
+        text-align: center;
+        margin-top: 1em;
+    }
+    @keyframes blink {
+        0% { color: red; }
+        50% { color: orange; }
+        100% { color: green; }
+    }
+    .star {
+        display: inline-block;
+        width: 100px;
+        height: 100px;
+        background: url('https://image.shutterstock.com/image-vector/bright-star-icon-colorful-polygon-260nw-1639156844.jpg') no-repeat center;
+        background-size: contain;
+    }
+    .offer-text {
+        font-size: 1.5em;
+        font-weight: bold;
+        text-align: left;
+        color: #ff4500;
+        padding-left: 10px;
+        margin-top: 10px;
+        position: absolute;
+        top: 20px;
+        left: 10px;
+    }
     </style>
     """,
     unsafe_allow_html=True
 )
 
-# Add a static box in the middle of the screen
-st.markdown('<div class="static-box">Offer of the Day - 5% off</div>', unsafe_allow_html=True)
+# Display the logo in the top-right corner
+st.markdown(f'<img src="{logo_path}" style="position: absolute; top: 10px; right: 10px; width: 100px;">', unsafe_allow_html=True)
+
+# Display Offer of the Day with a star image
+st.markdown('<div class="star"></div><div class="offer-text">Offer of the Day: 5% off!</div>', unsafe_allow_html=True)
 
 # Fetch last update time from GitHub and convert to Indian Standard Time
 def get_last_update_time():
@@ -173,8 +206,7 @@ master_df = pd.read_excel(master_data)
 # Get the list of ITEM NO. values and add an empty option
 item_no_list = [''] + master_df['ITEM NO.'].tolist()
 
-# Streamlit app
-st.image(logo_path, width=200)  # Display the logo
+# Streamlit app header
 st.markdown('<h1 class="title">Jyoti Cards Stock Status</h1>', unsafe_allow_html=True)
 
 # Dropdown for ITEM NO.
