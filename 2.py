@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import os
 import pandas as pd
+from datetime import datetime
 # Load the StkSum file
 stk_sum_file_path = 'StkSum jyoti (1).xlsx'
 stk_sum_df = pd.read_excel(stk_sum_file_path)
@@ -131,6 +132,129 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+import streamlit as st
+import requests
+import pandas as pd
+import os
+from datetime import datetime
+
+logo_path = 'jyoti logo-1.png'
+
+# Custom CSS for styling
+st.markdown(
+    """
+    <style>
+    .main {
+        background-color: #ffffff;
+    }
+    .stApp {
+        background-color: #ffffff;
+    }
+    .title {
+        font-size: 2.5em;
+        color: #4e8cff;
+        font-weight: bold;
+        text-align: center;
+        margin-top: 0;
+        padding-top: 0;
+    }
+    .input {
+        font-size: 1.25em;
+        color: #333;
+    }
+    .result {
+        font-size: 1.25em;
+        color: #333;
+        font-weight: bold;
+        text-align: center;
+    }
+    .footer {
+        font-size: 1em;
+        color: #888;
+        text-align: center;
+        margin-top: 2em;
+    }
+    .highlight-green {
+        font-size: 1.25em;
+        font-weight: bold;
+        color: #ffffff;
+        background-color: #28a745;
+        padding: 10px;
+        border-radius: 5px;
+        text-align: center;
+        margin-top: 1em;
+    }
+    .highlight-yellow {
+        font-size: 1.25em;
+        font-weight: bold;
+        color: #ffffff;
+        background-color: #ffc107;
+        padding: 10px;
+        border-radius: 5px;
+        text-align: center;
+        margin-top: 1em;
+    }
+    .highlight-red {
+        font-size: 1.25em;
+        font-weight: bold;
+        color: #ffffff;
+        background-color: #dc3545;
+        padding: 10px;
+        border-radius: 5px;
+        text-align: center;
+        margin-top: 1em;
+    }
+    .static-box {
+        font-size: 1.25em;
+        font-weight: bold;
+        background-color: #f1f1f1;
+        text-align: center;
+        padding: 10px;
+        border-radius: 5px;
+        margin-top: 2em;
+    }
+    .call-button {
+        display: inline-block;
+        font-size: 1.25em;
+        font-weight: bold;
+        color: #ffffff;
+        background-color: #007bff;
+        padding: 10px;
+        border-radius: 5px;
+        text-align: center;
+        margin-top: 10px;
+        text-decoration: none;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+# Add a static box in the middle of the screen
+st.markdown('<div class="static-box">Offer of the Day - 5% off</div>', unsafe_allow_html=True)
+
+# Fetch last update time from GitHub
+def get_last_update_time():
+    # Replace with your GitHub username and repo name
+    repo_url = 'https://api.github.com/repos/jyoti-creative-cards/jyoti-cards-stock-management-streamlit-app/commits'
+    
+    response = requests.get(repo_url)
+
+    if response.status_code == 200:
+        # Get the latest commit
+        latest_commit = response.json()[0]
+        commit_time = latest_commit['commit']['committer']['date']
+        # Format the date
+        commit_time = datetime.strptime(commit_time, '%Y-%m-%dT%H:%M:%SZ')
+        return commit_time.strftime('%d-%m-%Y %H:%M:%S')
+    else:
+        return "Unable to fetch update time"
+
+# Display last updated time
+last_update = get_last_update_time()
+st.markdown(f'<p class="result">Last Updated: {last_update}</p>', unsafe_allow_html=True)
+
+
 
 # Add a static box in the middle of the screen
 st.markdown('<div class="static-box">Offer of the Day - 5% off</div>', unsafe_allow_html=True)
