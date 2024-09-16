@@ -40,7 +40,7 @@ master_df_cleaned = pd.merge(master_df_cleaned, alternative_df, on='ITEM NO.', h
 master_df_cleaned['Alt1'] = master_df_cleaned['Alt1'].apply(lambda x: str(int(x)) if pd.notna(x) else '')
 master_df_cleaned['Alt2'] = master_df_cleaned['Alt2'].apply(lambda x: str(int(x)) if pd.notna(x) else '')
 master_df_cleaned['Alt3'] = master_df_cleaned['Alt3'].apply(lambda x: str(int(x)) if pd.notna(x) else '')
-master_df_cleaned = master_df
+master_df = master_df_cleaned 
 logo_path = 'jyoti logo-1.png'
 
 # Custom CSS for styling
@@ -132,103 +132,7 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
-import streamlit as st
-import requests
-import pandas as pd
-import os
-from datetime import datetime
 
-logo_path = 'jyoti logo-1.png'
-
-# Custom CSS for styling
-st.markdown(
-    """
-    <style>
-    .main {
-        background-color: #ffffff;
-    }
-    .stApp {
-        background-color: #ffffff;
-    }
-    .title {
-        font-size: 2.5em;
-        color: #4e8cff;
-        font-weight: bold;
-        text-align: center;
-        margin-top: 0;
-        padding-top: 0;
-    }
-    .input {
-        font-size: 1.25em;
-        color: #333;
-    }
-    .result {
-        font-size: 1.25em;
-        color: #333;
-        font-weight: bold;
-        text-align: center;
-    }
-    .footer {
-        font-size: 1em;
-        color: #888;
-        text-align: center;
-        margin-top: 2em;
-    }
-    .highlight-green {
-        font-size: 1.25em;
-        font-weight: bold;
-        color: #ffffff;
-        background-color: #28a745;
-        padding: 10px;
-        border-radius: 5px;
-        text-align: center;
-        margin-top: 1em;
-    }
-    .highlight-yellow {
-        font-size: 1.25em;
-        font-weight: bold;
-        color: #ffffff;
-        background-color: #ffc107;
-        padding: 10px;
-        border-radius: 5px;
-        text-align: center;
-        margin-top: 1em;
-    }
-    .highlight-red {
-        font-size: 1.25em;
-        font-weight: bold;
-        color: #ffffff;
-        background-color: #dc3545;
-        padding: 10px;
-        border-radius: 5px;
-        text-align: center;
-        margin-top: 1em;
-    }
-    .static-box {
-        font-size: 1.25em;
-        font-weight: bold;
-        background-color: #f1f1f1;
-        text-align: center;
-        padding: 10px;
-        border-radius: 5px;
-        margin-top: 2em;
-    }
-    .call-button {
-        display: inline-block;
-        font-size: 1.25em;
-        font-weight: bold;
-        color: #ffffff;
-        background-color: #007bff;
-        padding: 10px;
-        border-radius: 5px;
-        text-align: center;
-        margin-top: 10px;
-        text-decoration: none;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
 
 # Add a static box in the middle of the screen
 st.markdown('<div class="static-box">Offer of the Day - 5% off</div>', unsafe_allow_html=True)
