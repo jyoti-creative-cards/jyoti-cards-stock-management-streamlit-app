@@ -232,7 +232,7 @@ call_button = f'''
     Call
 </a>
 '''
-st.image(call_button, unsafe_allow_html=True)
+st.image(call_button)
 
 if item_no:
     # Check if ITEM NO. exists in cleaned data
