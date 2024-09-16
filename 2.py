@@ -118,7 +118,9 @@ st.markdown(
         margin-top: 2em;
     }
     .call-button {
-        display: inline-block;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         font-size: 1.25em;
         font-weight: bold;
         color: #ffffff;
@@ -131,6 +133,9 @@ st.markdown(
         box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
         transition: background-color 0.3s ease;
     }
+    .call-button img {
+        margin-right: 10px;
+    }
     .call-button:hover {
         background-color: #0056b3;
     }
@@ -140,21 +145,6 @@ st.markdown(
         color: red;
         text-align: center;
         margin-top: 1em;
-    }
-    .search-container {
-        display: flex;
-        justify-content: center;
-    }
-    .search-box {
-        padding-left: 30px;
-        font-size: 1.25em;
-        height: 40px;
-        border-radius: 5px;
-        border: 2px solid #ccc;
-        width: 100%;
-        max-width: 400px;
-        background: url('https://www.iconpacks.net/icons/2/free-search-icon-2903-thumb.png') no-repeat scroll 5px 10px;
-        background-size: 25px 25px;
     }
     </style>
     """,
@@ -194,16 +184,20 @@ item_no_list = [''] + master_df['ITEM NO.'].tolist()
 st.image(logo_path, width=200)  # Display the logo
 st.markdown('<h1 class="title">Jyoti Cards Stock Status</h1>', unsafe_allow_html=True)
 
-# Search box with a magnifying glass icon (simulated)
-st.markdown('<div class="search-container"><input class="search-box" placeholder="Search ITEM NO."></div>', unsafe_allow_html=True)
-
 # Dropdown for ITEM NO.
 item_no = st.selectbox('Select ITEM NO.', item_no_list, index=0)
 
-# Call button with enhanced styling
+# Call button with an actual call icon
 phone_number = "07312456565"
-call_button = f'<a href="tel:{phone_number}" class="call-button">Call</a>'
-st.markdown(f'{call_button}', unsafe_allow_html=True)
+call_icon_url = "https://www.iconpacks.net/icons/2/free-phone-icon-2798-thumb.png"  # URL for the call icon
+
+call_button = f'''
+<a href="tel:{phone_number}" class="call-button">
+    <img src="{call_icon_url}" width="24" height="24" alt="Call">
+    Call
+</a>
+'''
+st.markdown(call_button, unsafe_allow_html=True)
 
 if item_no:
     # Check if ITEM NO. exists in cleaned data
