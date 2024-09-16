@@ -3,7 +3,7 @@ import pandas as pd
 import os
 from datetime import datetime
 import requests
-
+import pytz
 # Load the StkSum file
 stk_sum_file_path = 'StkSum jyoti (1).xlsx'
 stk_sum_df = pd.read_excel(stk_sum_file_path)
@@ -154,7 +154,7 @@ st.markdown(
 # Add a static box in the middle of the screen
 st.markdown('<div class="static-box">Offer of the Day - 5% off</div>', unsafe_allow_html=True)
 
-# Fetch last update time from GitHub
+# Fetch last update time from GitHub and convert to Indian Standard Time
 def get_last_update_time():
     repo_url = 'https://api.github.com/repos/jyoti-creative-cards/jyoti-cards-stock-management-streamlit-app/commits'
     response = requests.get(repo_url)
@@ -163,9 +163,15 @@ def get_last_update_time():
         # Get the latest commit
         latest_commit = response.json()[0]
         commit_time = latest_commit['commit']['committer']['date']
-        # Format the date
-        commit_time = datetime.strptime(commit_time, '%Y-%m-%dT%H:%M:%SZ')
-        return commit_time.strftime('%d-%m-%Y %H:%M')
+        # Convert the UTC time to a datetime object
+        commit_time_utc = datetime.strptime(commit_time, '%Y-%m-%dT%H:%M:%SZ')
+
+        # Convert the UTC time to Indian Standard Time (UTC+5:30)
+        ist_timezone = pytz.timezone('Asia/Kolkata')
+        commit_time_ist = commit_time_utc.replace(tzinfo=pytz.utc).astimezone(ist_timezone)
+
+        # Format the IST time to the required format
+        return commit_time_ist.strftime('%d-%m-%Y %H:%M')
     else:
         return "Unable to fetch update time"
 
