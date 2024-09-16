@@ -181,9 +181,6 @@ st.markdown(
 st.markdown(f'<img src="{logo_path}" class="logo">', unsafe_allow_html=True)
 
 
-# Display the logo in the top-right corner using the CSS class
-st.markdown(f'<img src="{logo_path}" class="logo">', unsafe_allow_html=True)
-
 # Display Offer of the Day with a star image
 st.markdown('<div class="star"></div><div class="offer-text">Offer of the Day: 5% off!</div>', unsafe_allow_html=True)
 
