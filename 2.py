@@ -3,6 +3,7 @@ import pandas as pd
 import os
 import pandas as pd
 from datetime import datetime
+import requests
 # Load the StkSum file
 stk_sum_file_path = 'StkSum jyoti (1).xlsx'
 stk_sum_df = pd.read_excel(stk_sum_file_path)
