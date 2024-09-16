@@ -214,8 +214,8 @@ item_no = st.selectbox('Select ITEM NO.', item_no_list, index=0)
 
 # Call button with a call icon (without the big blue box)
 phone_number = "07312456565"
-call_icon_url = "https://www.iconpacks.net/icons/2/free-phone-icon-2798-thumb.png"  # URL for the call icon
-
+# Call button with an absolute URL for the call icon
+call_icon_url = "https://www.iconpacks.net/icons/2/free-phone-icon-2798-thumb.png"  # Ensure this is a valid, publicly accessible URL
 call_button = f'''
 <a href="tel:{phone_number}" class="call-link">
     <img src="{call_icon_url}" width="24" height="24" alt="Call Icon">
