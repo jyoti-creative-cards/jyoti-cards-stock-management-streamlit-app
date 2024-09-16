@@ -1,9 +1,9 @@
 import streamlit as st
 import pandas as pd
 import os
-import pandas as pd
 from datetime import datetime
 import requests
+
 # Load the StkSum file
 stk_sum_file_path = 'StkSum jyoti (1).xlsx'
 stk_sum_df = pd.read_excel(stk_sum_file_path)
@@ -36,12 +36,12 @@ master_df_cleaned = pd.merge(stk_sum_cleaned, condition_df, on='ITEM NO.', how='
 # Step 5: Merge the result with the alternative list
 master_df_cleaned = pd.merge(master_df_cleaned, alternative_df, on='ITEM NO.', how='left')
 
-
 # Convert alternatives to string and handle NaN values by replacing them with empty strings
 master_df_cleaned['Alt1'] = master_df_cleaned['Alt1'].apply(lambda x: str(int(x)) if pd.notna(x) else '')
 master_df_cleaned['Alt2'] = master_df_cleaned['Alt2'].apply(lambda x: str(int(x)) if pd.notna(x) else '')
 master_df_cleaned['Alt3'] = master_df_cleaned['Alt3'].apply(lambda x: str(int(x)) if pd.notna(x) else '')
 master_df = master_df_cleaned 
+
 logo_path = 'jyoti logo-1.png'
 
 # Custom CSS for styling
@@ -123,26 +123,50 @@ st.markdown(
         font-weight: bold;
         color: #ffffff;
         background-color: #007bff;
-        padding: 10px;
+        padding: 10px 20px;
         border-radius: 5px;
         text-align: center;
         margin-top: 10px;
         text-decoration: none;
+        box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+        transition: background-color 0.3s ease;
+    }
+    .call-button:hover {
+        background-color: #0056b3;
+    }
+    .last-updated {
+        font-size: 1.25em;
+        font-style: italic;
+        color: red;
+        text-align: center;
+        margin-top: 1em;
+    }
+    .search-container {
+        display: flex;
+        justify-content: center;
+    }
+    .search-box {
+        padding-left: 30px;
+        font-size: 1.25em;
+        height: 40px;
+        border-radius: 5px;
+        border: 2px solid #ccc;
+        width: 100%;
+        max-width: 400px;
+        background: url('https://www.iconpacks.net/icons/2/free-search-icon-2903-thumb.png') no-repeat scroll 5px 10px;
+        background-size: 25px 25px;
     }
     </style>
     """,
     unsafe_allow_html=True
 )
 
-
 # Add a static box in the middle of the screen
 st.markdown('<div class="static-box">Offer of the Day - 5% off</div>', unsafe_allow_html=True)
 
 # Fetch last update time from GitHub
 def get_last_update_time():
-    # Replace with your GitHub username and repo name
     repo_url = 'https://api.github.com/repos/jyoti-creative-cards/jyoti-cards-stock-management-streamlit-app/commits'
-    
     response = requests.get(repo_url)
 
     if response.status_code == 200:
@@ -151,18 +175,13 @@ def get_last_update_time():
         commit_time = latest_commit['commit']['committer']['date']
         # Format the date
         commit_time = datetime.strptime(commit_time, '%Y-%m-%dT%H:%M:%SZ')
-        return commit_time.strftime('%d-%m-%Y %H:%M:%S')
+        return commit_time.strftime('%d-%m-%Y %H:%M')
     else:
         return "Unable to fetch update time"
 
 # Display last updated time
 last_update = get_last_update_time()
-
-st.markdown(f'<p class="result">Last Updated: {last_update}</p>', unsafe_allow_html=True)
-
-
-
-
+st.markdown(f'<p class="last-updated">Last Updated: {last_update}</p>', unsafe_allow_html=True)
 
 # Load the alternative list data
 master_data = 'master_df.xlsx'
@@ -175,16 +194,21 @@ item_no_list = [''] + master_df['ITEM NO.'].tolist()
 st.image(logo_path, width=200)  # Display the logo
 st.markdown('<h1 class="title">Jyoti Cards Stock Status</h1>', unsafe_allow_html=True)
 
+# Search box with a magnifying glass icon (simulated)
+st.markdown('<div class="search-container"><input class="search-box" placeholder="Search ITEM NO."></div>', unsafe_allow_html=True)
+
 # Dropdown for ITEM NO.
 item_no = st.selectbox('Select ITEM NO.', item_no_list, index=0)
 
+# Call button with enhanced styling
 phone_number = "07312456565"
 call_button = f'<a href="tel:{phone_number}" class="call-button">Call</a>'
+st.markdown(f'{call_button}', unsafe_allow_html=True)
 
 if item_no:
     # Check if ITEM NO. exists in cleaned data
     item_row = master_df[master_df['ITEM NO.'] == item_no]
-    
+
     if not item_row.empty:
         quantity = item_row['Quantity'].values[0]
         condition_value = item_row['Condition'].values[0]
@@ -204,21 +228,20 @@ if item_no:
     # Display stock status
     if quantity is None or quantity == 0:
         st.markdown('<p class="highlight-red">यह आइटम स्टॉक में नहीं है, कृपया पुष्टि करने के लिए गोदाम में संपर्क करें</p>', unsafe_allow_html=True)
-        
+
     elif condition_value is not None and quantity > condition_value:
         st.markdown('<p class="highlight-green">यह आइटम स्टॉक में है, कृपया ऑर्डर बुक करने के लिए गोदाम में संपर्क करें</p>', unsafe_allow_html=True)
     else:
         st.markdown('<p class="highlight-yellow">यह आइटम का स्टॉक कम है, कृपया अधिक जानकारी के लिए गोदाम में संपर्क करें</p>', unsafe_allow_html=True)
-        
 
     # Display rate formatted to two decimal places and image of the selected item
     if rate is not None:
         formatted_rate = "{:.2f}".format(rate)
     else:
         formatted_rate = "N/A"
-    
+
     st.markdown(f'<p class="result">Rate: {formatted_rate}</p>', unsafe_allow_html=True)
-    
+
     image_path_jpeg = os.path.join('OLD ITEMS PHOTOS', f'{item_no}.jpeg')  # Adjust the file extension as needed
     if os.path.exists(image_path_jpeg):
         st.image(image_path_jpeg, caption=f'Image of {item_no}', use_column_width=True)
@@ -237,22 +260,16 @@ if item_no:
                 if not alt_row.empty:
                     alt_rate = alt_row['Rate'].values[0]
                     formatted_alt_rate = "{:.2f}".format(alt_rate) if alt_rate is not None else "N/A"
-                    
+
                     # Display the alternative item number and rate
                     st.markdown(f'<p class="result">Alternative Item: {alt_item}, Rate: {formatted_alt_rate}</p>', unsafe_allow_html=True)
-                    
+
                     # Display image for this alternative item if available
                     alt_image_path = os.path.join('OLD ITEMS PHOTOS', f'{alt_item}.jpeg')
                     if os.path.exists(alt_image_path):
                         st.image(alt_image_path, caption=f'Image of {alt_item}', use_column_width=True)
                     else:
                         st.markdown(f'<p class="result">No image available for {alt_item}</p>', unsafe_allow_html=True)
-
-    # Display call button
-    st.markdown(f'{call_button}', unsafe_allow_html=True)
-
-else:
-    st.markdown('<p class="result">Please select an ITEM NO.</p>', unsafe_allow_html=True)
 
 # Footer
 st.markdown('<p class="footer">Powered by Jyoti Cards</p>', unsafe_allow_html=True)
