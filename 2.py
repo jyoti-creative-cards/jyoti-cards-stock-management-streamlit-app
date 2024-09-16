@@ -134,7 +134,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-st.markdown(f'<p class="result">Last Updated: {last_update}</p>', unsafe_allow_html=True)
+
 # Add a static box in the middle of the screen
 st.markdown('<div class="static-box">Offer of the Day - 5% off</div>', unsafe_allow_html=True)
 
@@ -157,6 +157,8 @@ def get_last_update_time():
 
 # Display last updated time
 last_update = get_last_update_time()
+
+st.markdown(f'<p class="result">Last Updated: {last_update}</p>', unsafe_allow_html=True)
 
 
 
