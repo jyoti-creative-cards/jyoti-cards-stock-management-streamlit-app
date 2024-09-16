@@ -43,43 +43,45 @@ master_df_cleaned['Alt2'] = master_df_cleaned['Alt2'].apply(lambda x: str(int(x)
 master_df_cleaned['Alt3'] = master_df_cleaned['Alt3'].apply(lambda x: str(int(x)) if pd.notna(x) else '')
 master_df = master_df_cleaned 
 
-logo_path = 'static/jyoti logo-1.png'
+#logo_path = 'static/jyoti logo-1.png'
 call_icon_url = 'static/call_icon.png'
+# Serve local static images from the 'static' folder
+logo_path = 'static/jyoti logo-1.png'
 
-# Custom CSS for styling
+# Custom CSS for styling the logo position and other elements
 st.markdown(
-    """
+    f"""
     <style>
-    .main {
+    .main {{
         background-color: #ffffff;
-    }
-    .stApp {
+    }}
+    .stApp {{
         background-color: #ffffff;
-    }
-    .title {
+    }}
+    .title {{
         font-size: 2.2em;
         color: #4e8cff;
         font-weight: bold;
         text-align: center;
         margin-top: 1em;
-    }
-    .input {
+    }}
+    .input {{
         font-size: 1.25em;
         color: #333;
-    }
-    .result {
+    }}
+    .result {{
         font-size: 1.25em;
         color: #333;
         font-weight: bold;
         text-align: center;
-    }
-    .footer {
+    }}
+    .footer {{
         font-size: 1em;
         color: #888;
         text-align: center;
         margin-top: 2em;
-    }
-    .highlight-green {
+    }}
+    .highlight-green {{
         font-size: 1.25em;
         font-weight: bold;
         color: #ffffff;
@@ -88,8 +90,8 @@ st.markdown(
         border-radius: 5px;
         text-align: center;
         margin-top: 1em;
-    }
-    .highlight-yellow {
+    }}
+    .highlight-yellow {{
         font-size: 1.25em;
         font-weight: bold;
         color: #ffffff;
@@ -98,8 +100,8 @@ st.markdown(
         border-radius: 5px;
         text-align: center;
         margin-top: 1em;
-    }
-    .highlight-red {
+    }}
+    .highlight-red {{
         font-size: 1.25em;
         font-weight: bold;
         color: #ffffff;
@@ -108,8 +110,8 @@ st.markdown(
         border-radius: 5px;
         text-align: center;
         margin-top: 1em;
-    }
-    .static-box {
+    }}
+    .static-box {{
         font-size: 1.25em;
         font-weight: bold;
         background-color: #f1f1f1;
@@ -117,8 +119,8 @@ st.markdown(
         padding: 10px;
         border-radius: 5px;
         margin-top: 2em;
-    }
-    .call-link {
+    }}
+    .call-link {{
         display: inline-flex;
         align-items: center;
         font-size: 1.25em;
@@ -126,34 +128,34 @@ st.markdown(
         color: #007bff;
         text-decoration: none;
         transition: color 0.3s ease;
-    }
-    .call-link:hover {
+    }}
+    .call-link:hover {{
         color: #0056b3;
-    }
-    .call-link img {
+    }}
+    .call-link img {{
         margin-right: 8px;
-    }
-    .last-updated {
+    }}
+    .last-updated {{
         font-size: 1.5em;
         font-style: italic;
         color: red;
-        animation: blink 1.5s infinite;  /* Blinking animation */
+        animation: blink 1.5s infinite;
         text-align: center;
         margin-top: 1em;
-    }
-    @keyframes blink {
-        0% { color: red; }
-        50% { color: orange; }
-        100% { color: green; }
-    }
-    .star {
+    }}
+    @keyframes blink {{
+        0% {{ color: red; }}
+        50% {{ color: orange; }}
+        100% {{ color: green; }}
+    }}
+    .star {{
         display: inline-block;
         width: 100px;
         height: 100px;
         background: url('https://image.shutterstock.com/image-vector/bright-star-icon-colorful-polygon-260nw-1639156844.jpg') no-repeat center;
         background-size: contain;
-    }
-    .offer-text {
+    }}
+    .offer-text {{
         font-size: 1.5em;
         font-weight: bold;
         text-align: left;
@@ -163,14 +165,21 @@ st.markdown(
         position: absolute;
         top: 20px;
         left: 10px;
-    }
+    }}
+    /* CSS for positioning the logo in the top-right corner */
+    .logo {{
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        width: 100px;
+    }}
     </style>
     """,
     unsafe_allow_html=True
 )
 
-# Display the logo in the top-right corner
-st.image(f'<img src="{logo_path}" style="position: absolute; top: 10px; right: 10px; width: 100px;">', unsafe_allow_html=True)
+# Display the logo in the top-right corner using the CSS class
+st.markdown(f'<img src="{logo_path}" class="logo">', unsafe_allow_html=True)
 
 # Display Offer of the Day with a star image
 st.markdown('<div class="star"></div><div class="offer-text">Offer of the Day: 5% off!</div>', unsafe_allow_html=True)
