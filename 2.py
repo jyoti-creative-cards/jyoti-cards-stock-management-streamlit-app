@@ -4,6 +4,7 @@ import os
 from datetime import datetime
 import requests
 import pytz
+
 # Load the StkSum file
 stk_sum_file_path = 'StkSum jyoti (1).xlsx'
 stk_sum_df = pd.read_excel(stk_sum_file_path)
@@ -117,34 +118,20 @@ st.markdown(
         border-radius: 5px;
         margin-top: 2em;
     }
-    .call-button {
-        display: flex;
+    .call-link {
+        display: inline-flex;
         align-items: center;
-        justify-content: center;
         font-size: 1.25em;
         font-weight: bold;
-        color: #ffffff;
-        background-color: #007bff;
-        padding: 10px 20px;
-        border-radius: 5px;
-        text-align: center;
-        margin-top: 10px;
+        color: #007bff;
         text-decoration: none;
-        box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
-        transition: background-color 0.3s ease;
+        transition: color 0.3s ease;
     }
-    .call-button img {
-        margin-right: 10px;
+    .call-link:hover {
+        color: #0056b3;
     }
-    .call-button:hover {
-        background-color: #0056b3;
-    }
-    .last-updated {
-        font-size: 1.25em;
-        font-style: italic;
-        color: red;
-        text-align: center;
-        margin-top: 1em;
+    .call-link img {
+        margin-right: 8px;
     }
     </style>
     """,
@@ -193,13 +180,13 @@ st.markdown('<h1 class="title">Jyoti Cards Stock Status</h1>', unsafe_allow_html
 # Dropdown for ITEM NO.
 item_no = st.selectbox('Select ITEM NO.', item_no_list, index=0)
 
-# Call button with an actual call icon
+# Call button with a call icon (without the big blue box)
 phone_number = "07312456565"
 call_icon_url = "https://www.iconpacks.net/icons/2/free-phone-icon-2798-thumb.png"  # URL for the call icon
 
 call_button = f'''
-<a href="tel:{phone_number}" class="call-button">
-    <img src="{call_icon_url}" width="24" height="24" alt="Call">
+<a href="tel:{phone_number}" class="call-link">
+    <img src="{call_icon_url}" width="24" height="24" alt="Call Icon">
     Call
 </a>
 '''
