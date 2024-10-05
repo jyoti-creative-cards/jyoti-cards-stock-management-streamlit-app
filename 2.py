@@ -49,6 +49,7 @@ master_df = master_df_cleaned
 # Serve local static images from the 'static' folder
 logo_path = 'static/jyoti logo-1.png'
 call_icon_url = 'static/call_icon.png'
+search_icon_url = 'static/search_icon.png'  # Add path to your search icon
 
 # Function to encode images to base64
 def get_base64_image(image_path):
@@ -57,11 +58,15 @@ def get_base64_image(image_path):
         data = f.read()
     return base64.b64encode(data).decode()
 
+# Encode the images
+logo_base64 = get_base64_image(logo_path)
+call_icon_base64 = get_base64_image(call_icon_url)
+search_icon_base64 = get_base64_image(search_icon_url)
+
 # Custom CSS for styling
 st.markdown(
     f"""
     <style>
-    /* Paste your existing CSS here */
     .main {{
         background-color: #ffffff;
     }}
@@ -75,33 +80,146 @@ st.markdown(
         text-align: center;
         margin-top: 1em;
     }}
-    /* ... rest of your CSS ... */
+    .result {{
+        font-size: 1.25em;
+        color: #333;
+        font-weight: bold;
+        text-align: center;
+    }}
+    .footer {{
+        font-size: 1em;
+        color: #888;
+        text-align: center;
+        margin-top: 2em;
+    }}
+    .highlight-green {{
+        font-size: 1.25em;
+        font-weight: bold;
+        color: #ffffff;
+        background-color: #28a745;
+        padding: 10px;
+        border-radius: 5px;
+        text-align: center;
+        margin-top: 1em;
+    }}
+    .highlight-yellow {{
+        font-size: 1.25em;
+        font-weight: bold;
+        color: #ffffff;
+        background-color: #ffc107;
+        padding: 10px;
+        border-radius: 5px;
+        text-align: center;
+        margin-top: 1em;
+    }}
+    .highlight-red {{
+        font-size: 1.25em;
+        font-weight: bold;
+        color: #ffffff;
+        background-color: #dc3545;
+        padding: 10px;
+        border-radius: 5px;
+        text-align: center;
+        margin-top: 1em;
+    }}
+    .call-link {{
+        display: inline-flex;
+        align-items: center;
+        font-size: 1.25em;
+        font-weight: bold;
+        color: #007bff;
+        text-decoration: none;
+        transition: color 0.3s ease;
+    }}
+    .call-link:hover {{
+        color: #0056b3;
+    }}
+    .call-link img {{
+        margin-right: 8px;
+    }}
+    .last-updated {{
+        font-size: 1.5em;
+        font-style: italic;
+        color: red;
+        animation: blink 1.5s infinite;
+        text-align: center;
+        margin-top: 1em;
+    }}
+    @keyframes blink {{
+        0% {{ color: red; }}
+        50% {{ color: orange; }}
+        100% {{ color: green; }}
+    }}
+    /* CSS for positioning the logo in the top-right corner */
+    .logo {{
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        width: 100px;
+    }}
+    /* CSS for the search input */
+    .search-container {{
+        position: relative;
+        width: 100%;
+        max-width: 400px;
+        margin: 0 auto;
+        margin-top: 20px;
+    }}
+    .search-input {{
+        width: 100%;
+        padding: 10px 10px 10px 40px;
+        font-size: 1.25em;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+    }}
+    .search-icon {{
+        position: absolute;
+        top: 50%;
+        left: 10px;
+        transform: translateY(-50%);
+        width: 20px;
+        height: 20px;
+    }}
     </style>
     """,
     unsafe_allow_html=True
 )
 
 # Display the logo in the top-right corner using the CSS class
-logo_base64 = get_base64_image(logo_path)
 st.markdown(f'<img src="data:image/png;base64,{logo_base64}" class="logo">', unsafe_allow_html=True)
 
-# Display Offer of the Day with a star image (no changes needed)
+# Fetch last update time from GitHub and convert to Indian Standard Time
+def get_last_update_time():
+    repo_url = 'https://api.github.com/repos/jyoti-creative-cards/jyoti-cards-stock-management-streamlit-app/commits'
+    response = requests.get(repo_url)
 
-# Fetch last update time from GitHub and convert to Indian Standard Time (no changes needed)
+    if response.status_code == 200:
+        # Get the latest commit
+        latest_commit = response.json()[0]
+        commit_time = latest_commit['commit']['committer']['date']
+        # Convert the UTC time to a datetime object
+        commit_time_utc = datetime.strptime(commit_time, '%Y-%m-%dT%H:%M:%SZ')
 
-# Display last updated time (no changes needed)
+        # Convert the UTC time to Indian Standard Time (UTC+5:30)
+        ist_timezone = pytz.timezone('Asia/Kolkata')
+        commit_time_ist = commit_time_utc.replace(tzinfo=pytz.utc).astimezone(ist_timezone)
 
-# Get the list of ITEM NO. values and add an empty option
-item_no_list = [''] + master_df['ITEM NO.'].tolist()
+        # Format the IST time to the required format
+        return commit_time_ist.strftime('%d-%m-%Y %H:%M')
+    else:
+        return "Unable to fetch update time"
+
+# Display last updated time
+last_update = get_last_update_time()
+st.markdown(f'<p class="last-updated">Last Updated: {last_update}</p>', unsafe_allow_html=True)
+
+# Get the list of ITEM NO. values (we won't use it since we're using text input)
+# item_no_list = [''] + master_df['ITEM NO.'].tolist()
 
 # Streamlit app header
 st.markdown('<h1 class="title">Jyoti Cards Stock Status</h1>', unsafe_allow_html=True)
 
-# Dropdown for ITEM NO.
-item_no = st.selectbox('Select ITEM NO.', item_no_list, index=0)
-
 # Call button with a call icon
-call_icon_base64 = get_base64_image(call_icon_url)
 phone_number = "07312456565"
 call_button = f'''
 <a href="tel:{phone_number}" class="call-link">
@@ -110,6 +228,31 @@ call_button = f'''
 </a>
 '''
 st.markdown(call_button, unsafe_allow_html=True)
+
+# Search Input with magnifying glass icon and Hindi placeholder
+search_input_html = f'''
+<div class="search-container">
+    <img src="data:image/png;base64,{search_icon_base64}" class="search-icon">
+    <input type="text" id="item_no_input" class="search-input" placeholder="कृपया आइटम नंबर यहां डालें">
+</div>
+'''
+
+# Include the HTML and JavaScript
+st.markdown(search_input_html, unsafe_allow_html=True)
+
+# JavaScript to get the value from the input box
+st.components.v1.html(f"""
+<script>
+    const doc = window.parent.document;
+    const input = doc.getElementById('item_no_input');
+    input.addEventListener('input', function(){{
+        window.parent.postMessage({{type: 'streamlit:setComponentValue', value: input.value}}, '*');
+    }});
+</script>
+""", height=0)
+
+# Get the input value
+item_no = st.experimental_get_query_params().get('value', [''])[0]
 
 # Function to get stock status
 def get_stock_status(quantity, condition_value):
@@ -131,6 +274,9 @@ def get_image_path(item_no):
     return None
 
 if item_no:
+    # Remove any leading/trailing whitespaces
+    item_no = item_no.strip()
+    
     # Check if ITEM NO. exists in cleaned data
     item_row = master_df[master_df['ITEM NO.'] == item_no]
 
