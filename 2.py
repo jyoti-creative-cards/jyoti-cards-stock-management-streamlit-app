@@ -61,7 +61,6 @@ def get_base64_image(image_path):
 st.markdown(
     f"""
     <style>
-    /* Paste your existing CSS here */
     .main {{
         background-color: #ffffff;
     }}
@@ -75,7 +74,7 @@ st.markdown(
         text-align: center;
         margin-top: 1em;
     }}
-    /* ... rest of your CSS ... */
+    /* Add any additional CSS styling here */
     </style>
     """,
     unsafe_allow_html=True
@@ -85,20 +84,37 @@ st.markdown(
 logo_base64 = get_base64_image(logo_path)
 st.markdown(f'<img src="data:image/png;base64,{logo_base64}" class="logo">', unsafe_allow_html=True)
 
-# Display Offer of the Day with a star image (no changes needed)
+# Fetch last update time from GitHub and convert to Indian Standard Time
+def get_last_update_time():
+    repo_url = 'https://api.github.com/repos/jyoti-creative-cards/jyoti-cards-stock-management-streamlit-app/commits'
+    response = requests.get(repo_url)
 
-# Fetch last update time from GitHub and convert to Indian Standard Time (no changes needed)
+    if response.status_code == 200:
+        # Get the latest commit
+        latest_commit = response.json()[0]
+        commit_time = latest_commit['commit']['committer']['date']
+        # Convert the UTC time to a datetime object
+        commit_time_utc = datetime.strptime(commit_time, '%Y-%m-%dT%H:%M:%SZ')
 
-# Display last updated time (no changes needed)
+        # Convert the UTC time to Indian Standard Time (UTC+5:30)
+        ist_timezone = pytz.timezone('Asia/Kolkata')
+        commit_time_ist = commit_time_utc.replace(tzinfo=pytz.utc).astimezone(ist_timezone)
 
-# Get the list of ITEM NO. values and add an empty option
-item_no_list = [''] + master_df['ITEM NO.'].tolist()
+        # Format the IST time to the required format
+        return commit_time_ist.strftime('%d-%m-%Y %H:%M')
+    else:
+        return "Unable to fetch update time"
+
+# Display last updated time
+last_update = get_last_update_time()
+st.markdown(f'<p class="last-updated">Last Updated: {last_update}</p>', unsafe_allow_html=True)
+
+# Get the list of ITEM NO. values and add a placeholder option
+placeholder_option = '🔍 कृपया आइटम नंबर यहां डालें'
+item_no_list = [placeholder_option] + master_df['ITEM NO.'].tolist()
 
 # Streamlit app header
 st.markdown('<h1 class="title">Jyoti Cards Stock Status</h1>', unsafe_allow_html=True)
-
-# Dropdown for ITEM NO.
-item_no = st.selectbox('Select ITEM NO.', item_no_list, index=0)
 
 # Call button with a call icon
 call_icon_base64 = get_base64_image(call_icon_url)
@@ -110,6 +126,9 @@ call_button = f'''
 </a>
 '''
 st.markdown(call_button, unsafe_allow_html=True)
+
+# Selectbox for ITEM NO. with placeholder
+item_no = st.selectbox('', item_no_list, index=0)
 
 # Function to get stock status
 def get_stock_status(quantity, condition_value):
@@ -130,7 +149,8 @@ def get_image_path(item_no):
             return image_path
     return None
 
-if item_no:
+# Check if the selected item is not the placeholder
+if item_no and item_no != placeholder_option:
     # Check if ITEM NO. exists in cleaned data
     item_row = master_df[master_df['ITEM NO.'] == item_no]
 
@@ -190,6 +210,9 @@ if item_no:
                             st.image(alt_image_path, caption=f'Image of {alt_item}', use_column_width=True)
                         else:
                             st.markdown(f'<p class="result">No image available for {alt_item}</p>', unsafe_allow_html=True)
+else:
+    # Optional: Display a message prompting the user to select an item
+    st.markdown('<p class="result">कृपया एक आइटम नंबर चुनें</p>', unsafe_allow_html=True)
 
 # Footer
 st.markdown('<p class="footer">Powered by Jyoti Cards</p>', unsafe_allow_html=True)
