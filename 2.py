@@ -17,14 +17,16 @@ condition_df = pd.read_excel(condition_list_file_path)
 alternative_list_file_path = 'ALTERNATE LIST 10 SEPT.xlsx'
 alternative_df = pd.read_excel(alternative_list_file_path)
 
-# Ensure ITEM NO. columns are strings
-stk_sum_df['ITEM NO.'] = stk_sum_df['ITEM NO.'].astype(str)
+# Ensure ITEM NO. columns are strings in condition and alternative dataframes
 condition_df['ITEM NO.'] = condition_df['ITEM NO.'].astype(str)
 alternative_df['ITEM NO.'] = alternative_df['ITEM NO.'].astype(str)
 
 # Step 1: Clean the StkSum data
 stk_sum_cleaned = stk_sum_df.iloc[8:].reset_index(drop=True)
 stk_sum_cleaned.columns = ['ITEM NO.', 'Quantity', 'Rate', 'Value']  # Renaming the columns
+
+# Now convert ITEM NO. to string in stk_sum_cleaned
+stk_sum_cleaned['ITEM NO.'] = stk_sum_cleaned['ITEM NO.'].astype(str)
 
 # Process the ITEM NO. column (extract the numeric part)
 stk_sum_cleaned['ITEM NO.'] = stk_sum_cleaned['ITEM NO.'].apply(lambda x: x.split()[0] if isinstance(x, str) and x.split()[0].isdigit() else x)
@@ -59,7 +61,21 @@ def get_base64_image(image_path):
 st.markdown(
     f"""
     <style>
-    /* Your existing CSS */
+    /* Paste your existing CSS here */
+    .main {{
+        background-color: #ffffff;
+    }}
+    .stApp {{
+        background-color: #ffffff;
+    }}
+    .title {{
+        font-size: 2.2em;
+        color: #4e8cff;
+        font-weight: bold;
+        text-align: center;
+        margin-top: 1em;
+    }}
+    /* ... rest of your CSS ... */
     </style>
     """,
     unsafe_allow_html=True
