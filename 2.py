@@ -27,7 +27,7 @@ stk_sum_cleaned = stk_sum_df.iloc[8:].reset_index(drop=True)
 stk_sum_cleaned.columns = ['ITEM NO.', 'Quantity']  # Adjusted columns
 
 # Clean the rate_df data (skip the first 4 rows)
-rate_df_cleaned = rate_df.iloc[4:].reset_index(drop=True)
+rate_df_cleaned = rate_df.iloc[3:].reset_index(drop=True)
 rate_df_cleaned.columns = ['ITEM NO.', 'Rate']
 
 # Now ensure ITEM NO. columns are strings in all dataframes
