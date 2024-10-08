@@ -34,11 +34,13 @@ rate_df_cleaned.columns = ['ITEM NO.', 'Rate']
 # Convert 'ITEM NO.' to string in cleaned dataframes
 stk_sum_cleaned['ITEM NO.'] = stk_sum_cleaned['ITEM NO.'].astype(str)
 rate_df_cleaned['ITEM NO.'] = rate_df_cleaned['ITEM NO.'].astype(str)
+
 condition_df['ITEM NO.'] = condition_df['ITEM NO.'].astype(str)
 alternative_df['ITEM NO.'] = alternative_df['ITEM NO.'].astype(str)
 
 # Process the ITEM NO. column in stk_sum_cleaned (extract the numeric part)
 stk_sum_cleaned['ITEM NO.'] = stk_sum_cleaned['ITEM NO.'].apply(lambda x: x.split()[0] if isinstance(x, str) and x.split()[0].isdigit() else x)
+rate_df_cleaned['ITEM NO.'] = rate_df_cleaned['ITEM NO.'].apply(lambda x: x.split()[0] if isinstance(x, str) and x.split()[0].isdigit() else x)
 
 # Step 2: Multiply the 'Quantity' by 100
 stk_sum_cleaned['Quantity'] = pd.to_numeric(stk_sum_cleaned['Quantity'], errors='coerce') * 100
