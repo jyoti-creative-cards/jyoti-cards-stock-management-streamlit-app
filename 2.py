@@ -6,7 +6,7 @@ import requests
 import pytz
 
 # Load the StkSum file (now only 'ITEM NO.' and 'Quantity')
-stk_sum_file_path = 'StkSum jyoti (1).xlsx'
+stk_sum_file_path = 'StkSum_new.xlsx'
 stk_sum_df = pd.read_excel(stk_sum_file_path)
 
 # Load the rate list file, skipping the first 4 rows
@@ -30,8 +30,9 @@ rate_df['ITEM NO.'] = rate_df['ITEM NO.'].astype(str)
 # Step 1: Clean the StkSum data
 # Assuming that actual data starts from row 9 (skip first 8 rows)
 stk_sum_cleaned = stk_sum_df.iloc[8:].reset_index(drop=True)
+rate_df = rate_df.iloc[4:].reset_index(drop=True)
 stk_sum_cleaned.columns = ['ITEM NO.', 'Quantity']  # Adjusted columns
-
+rate_df.columns = ['ITEM NO.', 'Rate']
 # Now convert ITEM NO. to string in stk_sum_cleaned
 stk_sum_cleaned['ITEM NO.'] = stk_sum_cleaned['ITEM NO.'].astype(str)
 
