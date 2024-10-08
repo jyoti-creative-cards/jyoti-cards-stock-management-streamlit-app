@@ -5,9 +5,13 @@ from datetime import datetime
 import requests
 import pytz
 
-# Load the StkSum file
+# Load the StkSum file (now only 'ITEM NO.' and 'Quantity')
 stk_sum_file_path = 'StkSum jyoti (1).xlsx'
 stk_sum_df = pd.read_excel(stk_sum_file_path)
+
+# Load the rate list file, skipping the first 4 rows
+rate_file_path = 'rate list merged.xlsx'
+rate_df = pd.read_excel(rate_file_path, skiprows=4)
 
 # Load the 1112 (condition) file
 condition_list_file_path = '1112.xlsx'
@@ -17,13 +21,16 @@ condition_df = pd.read_excel(condition_list_file_path)
 alternative_list_file_path = 'ALTERNATE LIST 10 SEPT.xlsx'
 alternative_df = pd.read_excel(alternative_list_file_path)
 
-# Ensure ITEM NO. columns are strings in condition and alternative dataframes
+# Ensure ITEM NO. columns are strings in all dataframes
 condition_df['ITEM NO.'] = condition_df['ITEM NO.'].astype(str)
 alternative_df['ITEM NO.'] = alternative_df['ITEM NO.'].astype(str)
+stk_sum_df['ITEM NO.'] = stk_sum_df['ITEM NO.'].astype(str)
+rate_df['ITEM NO.'] = rate_df['ITEM NO.'].astype(str)
 
 # Step 1: Clean the StkSum data
+# Assuming that actual data starts from row 9 (skip first 8 rows)
 stk_sum_cleaned = stk_sum_df.iloc[8:].reset_index(drop=True)
-stk_sum_cleaned.columns = ['ITEM NO.', 'Quantity', 'Rate', 'Value']  # Renaming the columns
+stk_sum_cleaned.columns = ['ITEM NO.', 'Quantity']  # Adjusted columns
 
 # Now convert ITEM NO. to string in stk_sum_cleaned
 stk_sum_cleaned['ITEM NO.'] = stk_sum_cleaned['ITEM NO.'].astype(str)
@@ -34,17 +41,18 @@ stk_sum_cleaned['ITEM NO.'] = stk_sum_cleaned['ITEM NO.'].apply(lambda x: x.spli
 # Step 2: Multiply the 'Quantity' by 100
 stk_sum_cleaned['Quantity'] = pd.to_numeric(stk_sum_cleaned['Quantity'], errors='coerce') * 100
 
-# Step 4: Merge the cleaned StkSum data with Condition data
-master_df_cleaned = pd.merge(stk_sum_cleaned, condition_df, on='ITEM NO.', how='left')
+# Step 3: Merge the cleaned StkSum data with Condition data
+master_df = pd.merge(stk_sum_cleaned, condition_df, on='ITEM NO.', how='left')
 
-# Step 5: Merge the result with the alternative list
-master_df_cleaned = pd.merge(master_df_cleaned, alternative_df, on='ITEM NO.', how='left')
+# Step 4: Merge the result with the alternative list
+master_df = pd.merge(master_df, alternative_df, on='ITEM NO.', how='left')
+
+# Step 5: Merge with the rate data
+master_df = pd.merge(master_df, rate_df[['ITEM NO.', 'Rate']], on='ITEM NO.', how='left')
 
 # Convert alternatives to string and handle NaN values by replacing them with empty strings
 for col in ['Alt1', 'Alt2', 'Alt3']:
-    master_df_cleaned[col] = master_df_cleaned[col].apply(lambda x: str(int(float(x))) if pd.notna(x) else '')
-
-master_df = master_df_cleaned
+    master_df[col] = master_df[col].apply(lambda x: str(int(float(x))) if pd.notna(x) and x != '' else '')
 
 # Serve local static images from the 'static' folder
 logo_path = 'static/jyoti logo-1.png'
@@ -109,10 +117,6 @@ def get_last_update_time():
 last_update = get_last_update_time()
 st.markdown(f'<p class="last-updated">Last Updated: {last_update}</p>', unsafe_allow_html=True)
 
-# Get the list of ITEM NO. values and add a placeholder option
-placeholder_option = '🔍 कृपया आइटम नंबर यहां डालें'
-item_no_list = [placeholder_option] + master_df['ITEM NO.'].tolist()
-
 # Streamlit app header
 st.markdown('<h1 class="title">Jyoti Cards Stock Status</h1>', unsafe_allow_html=True)
 
@@ -127,8 +131,8 @@ call_button = f'''
 '''
 st.markdown(call_button, unsafe_allow_html=True)
 
-# Selectbox for ITEM NO. with placeholder
-item_no = st.selectbox('', item_no_list, index=0)
+# Text input for ITEM NO. with placeholder
+item_no = st.text_input('', placeholder='🔍 कृपया आइटम नंबर यहां डालें')
 
 # Function to get stock status
 def get_stock_status(quantity, condition_value):
@@ -149,9 +153,11 @@ def get_image_path(item_no):
             return image_path
     return None
 
-# Check if the selected item is not the placeholder
-if item_no and item_no != placeholder_option:
-    # Check if ITEM NO. exists in cleaned data
+# Check if the user has entered an item number
+if item_no:
+    # Remove any leading/trailing whitespace
+    item_no = item_no.strip()
+    # Check if ITEM NO. exists in master data
     item_row = master_df[master_df['ITEM NO.'] == item_no]
 
     if not item_row.empty:
@@ -164,31 +170,31 @@ if item_no and item_no != placeholder_option:
 
         stock_status = get_stock_status(quantity, condition_value)
 
-        # Display stock status
+        # Display stock status in colored box with Hindi messages
         if stock_status == 'Out of Stock':
-            st.markdown('<p class="highlight-red">यह आइटम स्टॉक में नहीं है, कृपया पुष्टि करने के लिए गोदाम में संपर्क करें</p>', unsafe_allow_html=True)
+            st.markdown('<div style="background-color:#f8d7da; padding:10px; border-radius:5px;"><p style="color:#721c24;">यह आइटम स्टॉक में नहीं है, कृपया पुष्टि करने के लिए गोदाम में संपर्क करें</p></div>', unsafe_allow_html=True)
         elif stock_status == 'In Stock':
-            st.markdown('<p class="highlight-green">यह आइटम स्टॉक में है, कृपया ऑर्डर बुक करने के लिए गोदाम में संपर्क करें</p>', unsafe_allow_html=True)
+            st.markdown('<div style="background-color:#d4edda; padding:10px; border-radius:5px;"><p style="color:#155724;">यह आइटम स्टॉक में है, कृपया ऑर्डर बुक करने के लिए गोदाम में संपर्क करें</p></div>', unsafe_allow_html=True)
         else:
-            st.markdown('<p class="highlight-yellow">यह आइटम का स्टॉक कम है, कृपया अधिक जानकारी के लिए गोदाम में संपर्क करें</p>', unsafe_allow_html=True)
+            st.markdown('<div style="background-color:#fff3cd; padding:10px; border-radius:5px;"><p style="color:#856404;">यह आइटम का स्टॉक कम है, कृपया अधिक जानकारी के लिए गोदाम में संपर्क करें</p></div>', unsafe_allow_html=True)
 
         # Display rate
-        formatted_rate = "{:.2f}".format(rate) if rate is not None else "N/A"
-        st.markdown(f'<p class="result">Rate: {formatted_rate}</p>', unsafe_allow_html=True)
+        formatted_rate = "{:.2f}".format(rate) if pd.notna(rate) else "N/A"
+        st.markdown(f'<p class="result">रेट: {formatted_rate}</p>', unsafe_allow_html=True)
 
         # Display image
         image_path = get_image_path(item_no)
         if image_path:
             st.image(image_path, caption=f'Image of {item_no}', use_column_width=True)
         else:
-            st.markdown('<p class="result">No image available for this ITEM NO.</p>', unsafe_allow_html=True)
+            st.markdown('<p class="result">इस आइटम नंबर के लिए कोई छवि उपलब्ध नहीं है।</p>', unsafe_allow_html=True)
     else:
-        st.markdown('<p class="result">ITEM NO. not available</p>', unsafe_allow_html=True)
+        st.markdown('<p class="result">आइटम नंबर उपलब्ध नहीं है</p>', unsafe_allow_html=True)
         stock_status = 'Out of Stock'
 
     # Only display alternatives when low stock or out of stock
     if stock_status in ['Out of Stock', 'Low Stock']:
-        st.markdown("<h2>Alternatives</h2>", unsafe_allow_html=True)
+        st.markdown("<h2>विकल्प</h2>", unsafe_allow_html=True)
 
         for alt_item in [alt1, alt2, alt3]:
             if alt_item and alt_item.strip() != '':
@@ -197,22 +203,28 @@ if item_no and item_no != placeholder_option:
                     alt_quantity = alt_row['Quantity'].values[0]
                     alt_condition_value = alt_row['Condition'].values[0]
                     alt_rate = alt_row['Rate'].values[0]
-                    formatted_alt_rate = "{:.2f}".format(alt_rate) if alt_rate is not None else "N/A"
+                    formatted_alt_rate = "{:.2f}".format(alt_rate) if pd.notna(alt_rate) else "N/A"
 
                     alt_stock_status = get_stock_status(alt_quantity, alt_condition_value)
 
                     if alt_stock_status == 'Out of Stock':
                         continue  # Skip alternatives that are out of stock
                     else:
-                        st.markdown(f'<p class="result">Alternative Item: {alt_item}, Rate: {formatted_alt_rate}, Stock Status: {alt_stock_status}</p>', unsafe_allow_html=True)
+                        # Display alternative stock status in Hindi
+                        if alt_stock_status == 'In Stock':
+                            alt_status_message = 'स्टॉक में उपलब्ध'
+                        else:
+                            alt_status_message = 'स्टॉक कम है'
+
+                        st.markdown(f'<p class="result">वैकल्पिक आइटम: {alt_item}, रेट: {formatted_alt_rate}, स्टॉक स्थिति: {alt_status_message}</p>', unsafe_allow_html=True)
                         alt_image_path = get_image_path(alt_item)
                         if alt_image_path:
                             st.image(alt_image_path, caption=f'Image of {alt_item}', use_column_width=True)
                         else:
-                            st.markdown(f'<p class="result">No image available for {alt_item}</p>', unsafe_allow_html=True)
+                            st.markdown(f'<p class="result">{alt_item} के लिए कोई छवि उपलब्ध नहीं है।</p>', unsafe_allow_html=True)
 else:
-    # Optional: Display a message prompting the user to select an item
-    st.markdown('<p class="result">कृपया एक आइटम नंबर चुनें</p>', unsafe_allow_html=True)
+    # Optional: Display a message prompting the user to enter an item number
+    st.markdown('<p class="result">कृपया एक आइटम नंबर दर्ज करें</p>', unsafe_allow_html=True)
 
 # Footer
 st.markdown('<p class="footer">Powered by Jyoti Cards</p>', unsafe_allow_html=True)
