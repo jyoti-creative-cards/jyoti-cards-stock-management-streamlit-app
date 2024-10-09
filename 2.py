@@ -8,6 +8,24 @@ import pytz
 # Load the StkSum file (now only 'ITEM NO.' and 'Quantity')
 stk_sum_file_path = 'StkSum_new.xlsx'
 stk_sum_df = pd.read_excel(stk_sum_file_path)
+# Function to fetch the last modification time of the StkSum file
+def get_file_modification_time(file_path):
+    if os.path.exists(file_path):
+        # Get the last modified time in UTC
+        mod_time = os.path.getmtime(file_path)
+        mod_datetime_utc = datetime.utcfromtimestamp(mod_time)
+
+        # Convert the UTC time to Indian Standard Time (UTC+5:30)
+        ist_timezone = pytz.timezone('Asia/Kolkata')
+        mod_datetime_ist = mod_datetime_utc.replace(tzinfo=pytz.utc).astimezone(ist_timezone)
+
+        # Format the IST time to the required format
+        return mod_datetime_ist.strftime('%d-%m-%Y %H:%M')
+    else:
+        return "File not found"
+
+# Display last updated time based on file modification time
+last_update = get_file_modification_time(stk_sum_file_path)
 
 # Load the rate list file
 rate_file_path = 'rate list merged.xlsx'
@@ -96,29 +114,7 @@ st.markdown(
 logo_base64 = get_base64_image(logo_path)
 st.markdown(f'<img src="data:image/png;base64,{logo_base64}" class="logo">', unsafe_allow_html=True)
 
-# Fetch last update time from GitHub and convert to Indian Standard Time
-def get_last_update_time():
-    repo_url = 'https://api.github.com/repos/jyoti-creative-cards/jyoti-cards-stock-management-streamlit-app/commits'
-    response = requests.get(repo_url)
 
-    if response.status_code == 200:
-        # Get the latest commit
-        latest_commit = response.json()[0]
-        commit_time = latest_commit['commit']['committer']['date']
-        # Convert the UTC time to a datetime object
-        commit_time_utc = datetime.strptime(commit_time, '%Y-%m-%dT%H:%M:%SZ')
-
-        # Convert the UTC time to Indian Standard Time (UTC+5:30)
-        ist_timezone = pytz.timezone('Asia/Kolkata')
-        commit_time_ist = commit_time_utc.replace(tzinfo=pytz.utc).astimezone(ist_timezone)
-
-        # Format the IST time to the required format
-        return commit_time_ist.strftime('%d-%m-%Y %H:%M')
-    else:
-        return "Unable to fetch update time"
-
-# Display last updated time
-last_update = get_last_update_time()
 st.markdown(f'<p class="last-updated">Last Updated: {last_update}</p>', unsafe_allow_html=True)
 
 # Streamlit app header
