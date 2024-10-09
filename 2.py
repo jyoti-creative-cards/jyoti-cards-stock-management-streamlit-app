@@ -148,7 +148,7 @@ def get_stock_status(quantity, condition_value):
 # Function to get image path
 def get_image_path(item_no):
     for ext in ['jpeg', 'jpg']:
-        image_path = os.path.join('OLD ITEMS PHOTOS', f'{item_no}.{ext}')
+        image_path = os.path.join('static', f'{item_no}.{ext}')
         if os.path.exists(image_path):
             return image_path
     return None
@@ -162,11 +162,12 @@ if item_no:
 
     if not item_row.empty:
         quantity = item_row['Quantity'].values[0]
-        condition_value = item_row['Condition'].values[0]
-        rate = item_row['Rate'].values[0]
-        alt1 = item_row['Alt1'].values[0]
-        alt2 = item_row['Alt2'].values[0]
-        alt3 = item_row['Alt3'].values[0]
+        condition_value = item_row['Condition'].values[0] if 'Condition' in item_row else None
+        rate = item_row['Rate'].values[0] if 'Rate' in item_row else None
+        alt1 = item_row['Alt1'].values[0] if 'Alt1' in item_row.columns else ''
+        alt2 = item_row['Alt2'].values[0] if 'Alt2' in item_row.columns else ''
+        alt3 = item_row['Alt3'].values[0] if 'Alt3' in item_row.columns else ''
+
 
         stock_status = get_stock_status(quantity, condition_value)
 
