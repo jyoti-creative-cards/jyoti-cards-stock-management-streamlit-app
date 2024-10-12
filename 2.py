@@ -25,14 +25,14 @@ stk_sum_file_path = 'StkSum_new.xlsx'
 stk_sum_df = pd.read_excel(stk_sum_file_path, skiprows=8, header=None, names=['ITEM NO.', 'Quantity'])
 
 # Verify the columns
-st.write("stk_sum_df columns:", stk_sum_df.columns.tolist())
+#st.write("stk_sum_df columns:", stk_sum_df.columns.tolist())
 
 # Load the rate list file, adjust if necessary
 rate_file_path = 'rate list merged.xlsx'
 rate_df = pd.read_excel(rate_file_path, skiprows=3, header=None, names=['ITEM NO.', 'Rate'])
 
 # Verify the columns
-st.write("rate_df columns:", rate_df.columns.tolist())
+#st.write("rate_df columns:", rate_df.columns.tolist())
 
 # Load the condition file
 condition_list_file_path = '1112.xlsx'
