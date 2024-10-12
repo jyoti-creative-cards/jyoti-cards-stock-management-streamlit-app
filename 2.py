@@ -78,8 +78,8 @@ def process_item_no(item_no):
 for df in [stk_sum_df, rate_df, condition_df, alternative_df]:
     df['ITEM NO.'] = df['ITEM NO.'].apply(process_item_no)
 
-# Step 2: Multiply the 'Quantity' by 100
-stk_sum_df['Quantity'] = pd.to_numeric(stk_sum_df['Quantity'], errors='coerce') * 100
+# Step 2: Multiply the 'QUANTITY' by 100
+stk_sum_df['QUANTITY'] = pd.to_numeric(stk_sum_df['QUANTITY'], errors='coerce') * 100
 
 # Step 3: Merge the cleaned StkSum data with Condition data
 master_df = pd.merge(stk_sum_df, condition_df, on='ITEM NO.', how='left')
@@ -88,7 +88,7 @@ master_df = pd.merge(stk_sum_df, condition_df, on='ITEM NO.', how='left')
 master_df = pd.merge(master_df, alternative_df, on='ITEM NO.', how='left')
 
 # Step 5: Merge with the rate data
-master_df = pd.merge(master_df, rate_df[['ITEM NO.', 'Rate']], on='ITEM NO.', how='left')
+master_df = pd.merge(master_df, rate_df[['ITEM NO.', 'RATE']], on='ITEM NO.', how='left')
 
 # Convert alternatives to string and handle NaN values by replacing them with empty strings
 for col in ['ALT1', 'ALT2', 'ALT3']:
@@ -183,9 +183,9 @@ if item_no:
     item_row = master_df[master_df['ITEM NO.'] == item_no_processed]
 
     if not item_row.empty:
-        quantity = item_row['Quantity'].values[0]
+        quantity = item_row['QUANTITY'].values[0]
         condition_value = item_row['CONDITION'].values[0] if 'CONDITION' in item_row.columns else None
-        rate = item_row['Rate'].values[0] if 'Rate' in item_row.columns else None
+        rate = item_row['RATE'].values[0] if 'RATE' in item_row.columns else None
         alt1 = item_row['ALT1'].values[0] if 'ALT1' in item_row.columns else ''
         alt2 = item_row['ALT2'].values[0] if 'ALT2' in item_row.columns else ''
         alt3 = item_row['ALT3'].values[0] if 'ALT3' in item_row.columns else ''
@@ -225,9 +225,9 @@ if item_no:
                 alt_item_processed = process_item_no(alt_item)
                 alt_row = master_df[master_df['ITEM NO.'] == alt_item_processed]
                 if not alt_row.empty:
-                    alt_quantity = alt_row['Quantity'].values[0]
+                    alt_quantity = alt_row['QUANTITY'].values[0]
                     alt_condition_value = alt_row['CONDITION'].values[0] if 'CONDITION' in alt_row.columns else None
-                    alt_rate = alt_row['Rate'].values[0] if 'Rate' in alt_row.columns else None
+                    alt_rate = alt_row['RATE'].values[0] if 'RATE' in alt_row.columns else None
                     formatted_alt_rate = "{:.2f}".format(alt_rate) if pd.notna(alt_rate) else "N/A"
 
                     alt_stock_status = get_stock_status(alt_quantity, alt_condition_value)
