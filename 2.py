@@ -20,31 +20,25 @@ def get_file_modification_time(file_path):
     else:
         return "File not found"
 
-# Load and standardize the StkSum file
+# Load the StkSum file, skipping the first 8 rows and without headers
 stk_sum_file_path = 'StkSum_new.xlsx'
-
-# Adjust skiprows and header based on where your headers and data start
-# Let's assume headers are on row 9 (index 8) and data starts on the next row
-stk_sum_df = pd.read_excel(stk_sum_file_path, skiprows=7, header=1)
+stk_sum_df = pd.read_excel(stk_sum_file_path, skiprows=8, header=None, names=['ITEM NO.', 'Quantity'])
 
 # Verify the columns
 st.write("stk_sum_df columns:", stk_sum_df.columns.tolist())
 
-# Load and standardize the rate list file
+# Load the rate list file, adjust if necessary
 rate_file_path = 'rate list merged.xlsx'
-# Adjust skiprows and header as needed
-rate_df = pd.read_excel(rate_file_path, skiprows=3)
-rate_df = rate_df.reset_index(drop=True)
-rate_df.columns = ['ITEM NO.', 'Rate']
+rate_df = pd.read_excel(rate_file_path, skiprows=3, header=None, names=['ITEM NO.', 'Rate'])
 
 # Verify the columns
 st.write("rate_df columns:", rate_df.columns.tolist())
 
-# Load and standardize the condition file
+# Load the condition file
 condition_list_file_path = '1112.xlsx'
 condition_df = pd.read_excel(condition_list_file_path)
 
-# Load and standardize the alternative file
+# Load the alternative file
 alternative_list_file_path = 'STOCK ALTERNATION LIST.xlsx'
 alternative_df = pd.read_excel(alternative_list_file_path)
 
@@ -68,13 +62,8 @@ for df_name, df in [('stk_sum_df', stk_sum_df), ('rate_df', rate_df), ('conditio
 # Display last updated time based on file modification time
 last_update = get_file_modification_time(stk_sum_file_path)
 
-# Proceed with cleaning the data
-stk_sum_cleaned = stk_sum_df.copy()
-
-rate_df_cleaned = rate_df.copy()
-
 # Ensure 'ITEM NO.' columns are strings in all DataFrames
-for df in [stk_sum_cleaned, rate_df_cleaned, condition_df, alternative_df]:
+for df in [stk_sum_df, rate_df, condition_df, alternative_df]:
     df['ITEM NO.'] = df['ITEM NO.'].astype(str)
 
 # Function to process ITEM NO.
@@ -86,20 +75,20 @@ def process_item_no(item_no):
         return str(item_no).strip()
 
 # Apply processing to 'ITEM NO.' in all DataFrames
-for df in [stk_sum_cleaned, rate_df_cleaned, condition_df, alternative_df]:
+for df in [stk_sum_df, rate_df, condition_df, alternative_df]:
     df['ITEM NO.'] = df['ITEM NO.'].apply(process_item_no)
 
 # Step 2: Multiply the 'Quantity' by 100
-stk_sum_cleaned['Quantity'] = pd.to_numeric(stk_sum_cleaned['Quantity'], errors='coerce') * 100
+stk_sum_df['Quantity'] = pd.to_numeric(stk_sum_df['Quantity'], errors='coerce') * 100
 
 # Step 3: Merge the cleaned StkSum data with Condition data
-master_df = pd.merge(stk_sum_cleaned, condition_df, on='ITEM NO.', how='left')
+master_df = pd.merge(stk_sum_df, condition_df, on='ITEM NO.', how='left')
 
 # Step 4: Merge the result with the alternative list
 master_df = pd.merge(master_df, alternative_df, on='ITEM NO.', how='left')
 
 # Step 5: Merge with the rate data
-master_df = pd.merge(master_df, rate_df_cleaned[['ITEM NO.', 'Rate']], on='ITEM NO.', how='left')
+master_df = pd.merge(master_df, rate_df[['ITEM NO.', 'Rate']], on='ITEM NO.', how='left')
 
 # Convert alternatives to string and handle NaN values by replacing them with empty strings
 for col in ['ALT1', 'ALT2', 'ALT3']:
