@@ -36,7 +36,7 @@ condition_list_file_path = '1112.xlsx'
 condition_df = pd.read_excel(condition_list_file_path)
 
 # Load the ALTERNATE file
-alternative_list_file_path = 'ALTERNATE LIST 10 SEPT.xlsx'
+alternative_list_file_path = 'STOCK ALTERNATION LIST.xlsx'
 alternative_df = pd.read_excel(alternative_list_file_path)
 
 # Step 1: Clean the StkSum data
