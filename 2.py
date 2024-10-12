@@ -2,12 +2,7 @@ import streamlit as st
 import pandas as pd
 import os
 from datetime import datetime
-import requests
 import pytz
-
-# Load the StkSum file (now only 'ITEM NO.' and 'Quantity')
-stk_sum_file_path = 'StkSum_new.xlsx'
-stk_sum_df = pd.read_excel(stk_sum_file_path, dtype={'ITEM NO.': str})
 
 # Function to fetch the last modification time of the StkSum file
 def get_file_modification_time(file_path):
@@ -25,20 +20,60 @@ def get_file_modification_time(file_path):
     else:
         return "File not found"
 
+# Load and standardize the StkSum file
+stk_sum_file_path = 'StkSum_new.xlsx'
+stk_sum_df = pd.read_excel(stk_sum_file_path)
+
+# Load and standardize the rate list file
+rate_file_path = 'rate list merged.xlsx'
+rate_df = pd.read_excel(rate_file_path)
+
+# Load and standardize the condition file
+condition_list_file_path = '1112.xlsx'
+condition_df = pd.read_excel(condition_list_file_path)
+
+# Load and standardize the alternative file
+alternative_list_file_path = 'STOCK ALTERNATION LIST.xlsx'
+alternative_df = pd.read_excel(alternative_list_file_path)
+
+# Function to standardize column names
+def standardize_column_names(df):
+    df.columns = df.columns.str.strip().str.upper()
+    return df
+
+# Standardize columns in all DataFrames
+stk_sum_df = standardize_column_names(stk_sum_df)
+rate_df = standardize_column_names(rate_df)
+condition_df = standardize_column_names(condition_df)
+alternative_df = standardize_column_names(alternative_df)
+
+# Verify 'ITEM NO.' column exists in all DataFrames
+for df_name, df in [('stk_sum_df', stk_sum_df), ('rate_df', rate_df), ('condition_df', condition_df), ('alternative_df', alternative_df)]:
+    if 'ITEM NO.' not in df.columns:
+        st.error(f"'ITEM NO.' column not found in {df_name} with columns: {df.columns.tolist()}")
+        st.stop()
+
 # Display last updated time based on file modification time
 last_update = get_file_modification_time(stk_sum_file_path)
 
-# Load the rate list file
-rate_file_path = 'rate list merged.xlsx'
-rate_df = pd.read_excel(rate_file_path, dtype={'ITEM NO.': str})
+# Proceed with cleaning the data
+# Assuming that actual data starts from row 9 (skip first 8 rows)
+stk_sum_cleaned = stk_sum_df.iloc[8:].reset_index(drop=True)
+stk_sum_cleaned.columns = ['ITEM NO.', 'Quantity']
 
-# Load the 1112 (condition) file
-condition_list_file_path = '1112.xlsx'
-condition_df = pd.read_excel(condition_list_file_path, dtype={'ITEM NO.': str})
+# Clean the rate_df data (skip the first 4 rows)
+rate_df_cleaned = rate_df.iloc[3:].reset_index(drop=True)
+rate_df_cleaned.columns = ['ITEM NO.', 'Rate']
 
-# Load the ALTERNATE file
-alternative_list_file_path = 'STOCK ALTERNATION LIST.xlsx'
-alternative_df = pd.read_excel(alternative_list_file_path, dtype={'ITEM NO.': str, 'Alt1': str, 'Alt2': str, 'Alt3': str})
+# Verify 'ITEM NO.' column exists after cleaning
+for df_name, df in [('stk_sum_cleaned', stk_sum_cleaned), ('rate_df_cleaned', rate_df_cleaned)]:
+    if 'ITEM NO.' not in df.columns:
+        st.error(f"After cleaning, 'ITEM NO.' column is missing in {df_name}.")
+        st.stop()
+
+# Ensure 'ITEM NO.' columns are strings in all DataFrames
+for df in [stk_sum_cleaned, rate_df_cleaned, condition_df, alternative_df]:
+    df['ITEM NO.'] = df['ITEM NO.'].astype(str)
 
 # Function to process ITEM NO.
 def process_item_no(item_no):
@@ -49,25 +84,8 @@ def process_item_no(item_no):
         return str(item_no).strip()
 
 # Apply processing to 'ITEM NO.' in all DataFrames
-for df in [stk_sum_df, rate_df, condition_df, alternative_df]:
+for df in [stk_sum_cleaned, rate_df_cleaned, condition_df, alternative_df]:
     df['ITEM NO.'] = df['ITEM NO.'].apply(process_item_no)
-
-# Step 1: Clean the StkSum data
-# Assuming that actual data starts from row 9 (skip first 8 rows)
-stk_sum_cleaned = stk_sum_df.iloc[8:].reset_index(drop=True)
-stk_sum_cleaned.columns = ['ITEM NO.', 'Quantity']  # Adjusted columns
-
-# Clean the rate_df data (skip the first 4 rows)
-rate_df_cleaned = rate_df.iloc[3:].reset_index(drop=True)
-rate_df_cleaned.columns = ['ITEM NO.', 'Rate']
-
-# Ensure 'ITEM NO.' columns are strings in cleaned dataframes
-stk_sum_cleaned['ITEM NO.'] = stk_sum_cleaned['ITEM NO.'].astype(str)
-rate_df_cleaned['ITEM NO.'] = rate_df_cleaned['ITEM NO.'].astype(str)
-
-# Process 'ITEM NO.' columns again after cleaning
-stk_sum_cleaned['ITEM NO.'] = stk_sum_cleaned['ITEM NO.'].apply(process_item_no)
-rate_df_cleaned['ITEM NO.'] = rate_df_cleaned['ITEM NO.'].apply(process_item_no)
 
 # Step 2: Multiply the 'Quantity' by 100
 stk_sum_cleaned['Quantity'] = pd.to_numeric(stk_sum_cleaned['Quantity'], errors='coerce') * 100
@@ -82,8 +100,11 @@ master_df = pd.merge(master_df, alternative_df, on='ITEM NO.', how='left')
 master_df = pd.merge(master_df, rate_df_cleaned[['ITEM NO.', 'Rate']], on='ITEM NO.', how='left')
 
 # Convert alternatives to string and handle NaN values by replacing them with empty strings
-for col in ['Alt1', 'Alt2', 'Alt3']:
-    master_df[col] = master_df[col].apply(lambda x: str(x).strip() if pd.notna(x) and x != '' else '')
+for col in ['ALT1', 'ALT2', 'ALT3']:
+    if col in master_df.columns:
+        master_df[col] = master_df[col].apply(lambda x: str(x).strip() if pd.notna(x) and x != '' else '')
+    else:
+        master_df[col] = ''
 
 # Serve local static images from the 'static' folder
 logo_path = 'static/jyoti logo-1.png'
@@ -172,11 +193,11 @@ if item_no:
 
     if not item_row.empty:
         quantity = item_row['Quantity'].values[0]
-        condition_value = item_row['Condition'].values[0] if 'Condition' in item_row.columns else None
+        condition_value = item_row['CONDITION'].values[0] if 'CONDITION' in item_row.columns else None
         rate = item_row['Rate'].values[0] if 'Rate' in item_row.columns else None
-        alt1 = item_row['Alt1'].values[0] if 'Alt1' in item_row.columns else ''
-        alt2 = item_row['Alt2'].values[0] if 'Alt2' in item_row.columns else ''
-        alt3 = item_row['Alt3'].values[0] if 'Alt3' in item_row.columns else ''
+        alt1 = item_row['ALT1'].values[0] if 'ALT1' in item_row.columns else ''
+        alt2 = item_row['ALT2'].values[0] if 'ALT2' in item_row.columns else ''
+        alt3 = item_row['ALT3'].values[0] if 'ALT3' in item_row.columns else ''
 
         stock_status = get_stock_status(quantity, condition_value)
 
@@ -214,7 +235,7 @@ if item_no:
                 alt_row = master_df[master_df['ITEM NO.'] == alt_item_processed]
                 if not alt_row.empty:
                     alt_quantity = alt_row['Quantity'].values[0]
-                    alt_condition_value = alt_row['Condition'].values[0] if 'Condition' in alt_row.columns else None
+                    alt_condition_value = alt_row['CONDITION'].values[0] if 'CONDITION' in alt_row.columns else None
                     alt_rate = alt_row['Rate'].values[0] if 'Rate' in alt_row.columns else None
                     formatted_alt_rate = "{:.2f}".format(alt_rate) if pd.notna(alt_rate) else "N/A"
 
