@@ -22,11 +22,23 @@ def get_file_modification_time(file_path):
 
 # Load and standardize the StkSum file
 stk_sum_file_path = 'StkSum_new.xlsx'
-stk_sum_df = pd.read_excel(stk_sum_file_path)
+
+# Adjust skiprows and header based on where your headers and data start
+# Let's assume headers are on row 9 (index 8) and data starts on the next row
+stk_sum_df = pd.read_excel(stk_sum_file_path, skiprows=7, header=1)
+
+# Verify the columns
+st.write("stk_sum_df columns:", stk_sum_df.columns.tolist())
 
 # Load and standardize the rate list file
 rate_file_path = 'rate list merged.xlsx'
-rate_df = pd.read_excel(rate_file_path)
+# Adjust skiprows and header as needed
+rate_df = pd.read_excel(rate_file_path, skiprows=3)
+rate_df = rate_df.reset_index(drop=True)
+rate_df.columns = ['ITEM NO.', 'Rate']
+
+# Verify the columns
+st.write("rate_df columns:", rate_df.columns.tolist())
 
 # Load and standardize the condition file
 condition_list_file_path = '1112.xlsx'
@@ -57,19 +69,9 @@ for df_name, df in [('stk_sum_df', stk_sum_df), ('rate_df', rate_df), ('conditio
 last_update = get_file_modification_time(stk_sum_file_path)
 
 # Proceed with cleaning the data
-# Assuming that actual data starts from row 9 (skip first 8 rows)
-stk_sum_cleaned = stk_sum_df.iloc[8:].reset_index(drop=True)
-stk_sum_cleaned.columns = ['ITEM NO.', 'Quantity']
+stk_sum_cleaned = stk_sum_df.copy()
 
-# Clean the rate_df data (skip the first 4 rows)
-rate_df_cleaned = rate_df.iloc[3:].reset_index(drop=True)
-rate_df_cleaned.columns = ['ITEM NO.', 'Rate']
-
-# Verify 'ITEM NO.' column exists after cleaning
-for df_name, df in [('stk_sum_cleaned', stk_sum_cleaned), ('rate_df_cleaned', rate_df_cleaned)]:
-    if 'ITEM NO.' not in df.columns:
-        st.error(f"After cleaning, 'ITEM NO.' column is missing in {df_name}.")
-        st.stop()
+rate_df_cleaned = rate_df.copy()
 
 # Ensure 'ITEM NO.' columns are strings in all DataFrames
 for df in [stk_sum_cleaned, rate_df_cleaned, condition_df, alternative_df]:
