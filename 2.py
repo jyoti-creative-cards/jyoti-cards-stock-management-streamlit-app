@@ -3,6 +3,7 @@ import pandas as pd
 import os
 from datetime import datetime
 import pytz
+import re  # Import regex module
 
 # Function to fetch the last modification time of the StkSum file
 def get_file_modification_time(file_path):
@@ -22,17 +23,11 @@ def get_file_modification_time(file_path):
 
 # Load the StkSum file, skipping the first 8 rows and without headers
 stk_sum_file_path = 'StkSum_new.xlsx'
-stk_sum_df = pd.read_excel(stk_sum_file_path, skiprows=8, header=None, names=['ITEM NO.', 'Quantity'])
-
-# Verify the columns
-#st.write("stk_sum_df columns:", stk_sum_df.columns.tolist())
+stk_sum_df = pd.read_excel(stk_sum_file_path, skiprows=8, header=None, names=['ITEM NO.', 'QUANTITY'])
 
 # Load the rate list file, adjust if necessary
 rate_file_path = 'rate list merged.xlsx'
-rate_df = pd.read_excel(rate_file_path, skiprows=3, header=None, names=['ITEM NO.', 'Rate'])
-
-# Verify the columns
-#st.write("rate_df columns:", rate_df.columns.tolist())
+rate_df = pd.read_excel(rate_file_path, skiprows=3, header=None, names=['ITEM NO.', 'RATE'])
 
 # Load the condition file
 condition_list_file_path = '1112.xlsx'
@@ -69,17 +64,29 @@ for df in [stk_sum_df, rate_df, condition_df, alternative_df]:
 # Function to process ITEM NO.
 def process_item_no(item_no):
     if isinstance(item_no, str):
-        parts = item_no.strip().split()
+        item_no = item_no.strip().upper()
+        parts = item_no.split()
         return parts[0] if parts else item_no
     else:
-        return str(item_no).strip()
+        return str(item_no).strip().upper()
 
 # Apply processing to 'ITEM NO.' in all DataFrames
 for df in [stk_sum_df, rate_df, condition_df, alternative_df]:
     df['ITEM NO.'] = df['ITEM NO.'].apply(process_item_no)
 
-# Step 2: Multiply the 'QUANTITY' by 100
-stk_sum_df['QUANTITY'] = pd.to_numeric(stk_sum_df['QUANTITY'], errors='coerce') * 100
+# Clean the 'QUANTITY' column by removing non-numeric characters
+def clean_quantity(qty):
+    if isinstance(qty, str):
+        qty = qty.strip()
+        match = re.match(r'([\d\.]+)', qty)
+        if match:
+            return float(match.group(1))
+    return pd.to_numeric(qty, errors='coerce')
+
+stk_sum_df['QUANTITY'] = stk_sum_df['QUANTITY'].apply(clean_quantity) * 100
+
+# Debug: Display the DataFrame after cleaning QUANTITY
+# st.write("stk_sum_df after cleaning QUANTITY:", stk_sum_df.head())
 
 # Step 3: Merge the cleaned StkSum data with Condition data
 master_df = pd.merge(stk_sum_df, condition_df, on='ITEM NO.', how='left')
@@ -156,7 +163,7 @@ item_no = st.text_input('', placeholder='🔍 कृपया आइटम न�
 
 # Function to get stock status
 def get_stock_status(quantity, condition_value):
-    if pd.isna(quantity) or quantity == 0:
+    if pd.isna(quantity) or quantity <= 0:
         return 'Out of Stock'
     elif pd.isna(condition_value):
         return 'In Stock'
@@ -175,10 +182,9 @@ def get_image_path(item_no):
 
 # Check if the user has entered an item number
 if item_no:
-    # Remove any leading/trailing whitespace
-    item_no = item_no.strip()
     # Process the item_no to match the format in master_df
     item_no_processed = process_item_no(item_no)
+
     # Check if ITEM NO. exists in master data
     item_row = master_df[master_df['ITEM NO.'] == item_no_processed]
 
