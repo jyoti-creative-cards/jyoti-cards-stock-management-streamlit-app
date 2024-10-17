@@ -154,9 +154,12 @@ st.markdown(call_button, unsafe_allow_html=True)
 # Text input for ITEM NO. with placeholder
 item_no = st.text_input('', placeholder='🔍 कृपया आइटम नंबर यहां डालें')
 
+
+
+        
 # Function to get stock status
 def get_stock_status(quantity, condition_value):
-    if pd.isna(quantity) or quantity == 0:
+    if pd.isna(quantity) or quantity <= 0:
         return 'Out of Stock'
     elif pd.isna(condition_value):
         return 'In Stock'
