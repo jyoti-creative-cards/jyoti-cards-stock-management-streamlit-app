@@ -1,55 +1,9 @@
 import streamlit as st
 import pandas as pd
 import os
-import pandas as pd
 
-# Load the data from the original files
-stk_sum_file = 'StkSum_new.xlsx'
-rate_list_file = 'rate list merged.xlsx'
-alternate_list_file = 'ALTERNATE LIST 10 SEPT (2).xlsx'
-condition_file = '1112.xlsx'
-
-# Load and process Stk Sum (Stock Summary) sheet
-df_stk_sum = pd.read_excel(stk_sum_file)
-df_stk_sum = df_stk_sum.iloc[7:].reset_index(drop=True)
-df_stk_sum.columns = ['ITEM NO.', 'Quantity']
-df_stk_sum['ITEM NO.'] = df_stk_sum['ITEM NO.'].str.extract(r'(\d{4})')
-df_stk_sum['Quantity'] = df_stk_sum['Quantity'].astype(str).str.replace(' pcs', '').astype(float) * 100
-df_stk_sum['Quantity'] = df_stk_sum['Quantity'].fillna(0).astype(int)
-
-# Load and process Rate List sheet
-df_rate_list = pd.read_excel(rate_list_file)
-df_rate_list = df_rate_list.iloc[3:].reset_index(drop=True)
-df_rate_list.columns = ['ITEM NO.', 'Rate']
-df_rate_list['ITEM NO.'] = df_rate_list['ITEM NO.'].str.extract(r'(\d{4})')
-df_rate_list['Rate'] = pd.to_numeric(df_rate_list['Rate'], errors='coerce').fillna(0).astype(float)
-
-# Load and process Alternate List sheet
-df_alternate = pd.read_excel(alternate_list_file)
-
-# Select the relevant columns from the Alternate List
-df_alternate = df_alternate[['ITEM NO.', 'Alt1', 'Alt2', 'Alt3']]
-
-# Ensure the columns are treated as strings
-df_alternate['ITEM NO.'] = df_alternate['ITEM NO.'].astype(str)
-df_alternate[['Alt1', 'Alt2', 'Alt3']] = df_alternate[['Alt1', 'Alt2', 'Alt3']].astype(str)
-
-# Load and process Condition sheet
-df_condition = pd.read_excel(condition_file)
-df_condition.columns = ['ITEM NO.', 'CONDITION']
-df_condition['ITEM NO.'] = df_condition['ITEM NO.'].astype(str)
-# Clean the ITEM NO. in the Condition sheet to extract only the numeric portion
-df_condition['ITEM NO.'] = df_condition['ITEM NO.'].str.extract(r'(\d{4})')
-
-df_condition['CONDITION'] = pd.to_numeric(df_condition['CONDITION'], errors='coerce').fillna(0)
-
-# Merge all datasets into one master dataframe
-master_df = df_stk_sum.merge(df_rate_list, on='ITEM NO.', how='left') \
-                      .merge(df_alternate, on='ITEM NO.', how='left') \
-                      .merge(df_condition, on='ITEM NO.', how='left')
-
-# Fill NaN values for missing data
-master_df.fillna({'Quantity': 'Not Available', 'Rate': 'Not Available', 'Alt1': 'None', 'Alt2': 'None', 'Alt3': 'None', 'CONDITION': 'Not Available'}, inplace=True)
+# Load the master dataframe from the CSV file
+master_df = pd.read_csv('master_df.csv', dtype=str)
 
 # Ensure that 'ITEM NO.' is a string without any decimal points
 master_df['ITEM NO.'] = master_df['ITEM NO.'].str.strip()
