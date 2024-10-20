@@ -180,11 +180,11 @@ if item_no:
         
         # Display stock status in colored box with Hindi messages
         if stock_status == 'Out of Stock':
-            st.markdown('<div style="background-color:#f8d7da; padding:10px; border-radius:5px;"><p style="color:#721c24;">यह आइटम स्टॉक में नहीं है</p></div>', unsafe_allow_html=True)
+            st.markdown('<div style="background-color:#f8d7da; padding:10px; border-radius:5px;"><p style="color:#721c24;">यह आइटम स्टॉक में नहीं है, अधिक जानकारी के लिए गोदाम पर संपर्क करें</p></div>', unsafe_allow_html=True)
         elif stock_status == 'In Stock':
-            st.markdown('<div style="background-color:#d4edda; padding:10px; border-radius:5px;"><p style="color:#155724;">यह आइटम स्टॉक में है</p></div>', unsafe_allow_html=True)
+            st.markdown('<div style="background-color:#d4edda; padding:10px; border-radius:5px;"><p style="color:#155724;">यह आइटम स्टॉक में है, कृपया गोदाम पर बुकिंग के लिए कॉल करें</p></div>', unsafe_allow_html=True)
         else:
-            st.markdown('<div style="background-color:#fff3cd; padding:10px; border-radius:5px;"><p style="color:#856404;">यह आइटम का स्टॉक कम है</p></div>', unsafe_allow_html=True)
+            st.markdown('<div style="background-color:#fff3cd; padding:10px; border-radius:5px;"><p style="color:#856404;">यह आइटम का स्टॉक कम है, कृपया शिग्र गोदाम पर बुक करें</p></div>', unsafe_allow_html=True)
         
         # Display rate
         formatted_rate = "{:.2f}".format(rate) if pd.notna(rate) else "N/A"
