@@ -3,6 +3,7 @@ import pandas as pd
 import os
 from datetime import datetime
 import pytz
+import re
 
 # Function to fetch the last modification time of the StkSum file
 def get_file_modification_time(file_path):
@@ -22,23 +23,23 @@ def get_file_modification_time(file_path):
 
 # Load the StkSum file, skipping the first 8 rows and without headers
 stk_sum_file_path = 'StkSum_new.xlsx'
-stk_sum_df = pd.read_excel(stk_sum_file_path, skiprows=8, header=None, names=['ITEM NO.', 'Quantity'], dtype={'ITEM NO.': str})
-print("stk_sum_df ITEM NO.:", stk_sum_df['ITEM NO.'].head())
+stk_sum_df = pd.read_excel(stk_sum_file_path, skiprows=8, header=None, names=['ITEM NO.', 'Quantity'])
+stk_sum_df['ITEM NO.'] = stk_sum_df['ITEM NO.'].astype(str)
 
 # Load the rate list file, adjust if necessary
 rate_file_path = 'rate list merged.xlsx'
-rate_df = pd.read_excel(rate_file_path, skiprows=3, header=None, names=['ITEM NO.', 'Rate'], dtype={'ITEM NO.': str})
-print("rate_df ITEM NO.:", rate_df['ITEM NO.'].head())
+rate_df = pd.read_excel(rate_file_path, skiprows=3, header=None, names=['ITEM NO.', 'Rate'])
+rate_df['ITEM NO.'] = rate_df['ITEM NO.'].astype(str)
 
 # Load the condition file
 condition_list_file_path = '1112.xlsx'
-condition_df = pd.read_excel(condition_list_file_path, dtype={'ITEM NO.': str})
-print("condition_df ITEM NO.:", condition_df['ITEM NO.'].head())
+condition_df = pd.read_excel(condition_list_file_path)
+condition_df['ITEM NO.'] = condition_df['ITEM NO.'].astype(str)
 
 # Load the alternative file
 alternative_list_file_path = 'STOCK ALTERNATION LIST.xlsx'
-alternative_df = pd.read_excel(alternative_list_file_path, dtype={'ITEM NO.': str})
-print("alternative_df ITEM NO.:", alternative_df['ITEM NO.'].head())
+alternative_df = pd.read_excel(alternative_list_file_path)
+alternative_df['ITEM NO.'] = alternative_df['ITEM NO.'].astype(str)
 
 # Function to standardize column names
 def standardize_column_names(df):
@@ -57,28 +58,21 @@ for df_name, df in [('stk_sum_df', stk_sum_df), ('rate_df', rate_df), ('conditio
         st.error(f"'ITEM NO.' column not found in {df_name} with columns: {df.columns.tolist()}")
         st.stop()
 
-# Display last updated time based on file modification time
-last_update = get_file_modification_time(stk_sum_file_path)
-
-# Ensure 'ITEM NO.' columns are strings and strip spaces
-for df_name, df in [('stk_sum_df', stk_sum_df), ('rate_df', rate_df), ('condition_df', condition_df), ('alternative_df', alternative_df)]:
-    df['ITEM NO.'] = df['ITEM NO.'].astype(str).str.strip()
-    print(f"After processing, {df_name} ITEM NO.:", df['ITEM NO.'].head())
-
 # Function to process ITEM NO.
 def process_item_no(item_no):
-    if pd.isnull(item_no):
-        return ''
     item_no_str = str(item_no).strip()
-    # Remove '.0' from the end if present
-    if item_no_str.endswith('.0'):
-        item_no_str = item_no_str[:-2]
-    parts = item_no_str.split()
-    return parts[0] if parts else item_no_str
+    # Extract the first four digits
+    match = re.match(r'^(\d{4})', item_no_str)
+    return match.group(1) if match else ''
 
 # Apply processing to 'ITEM NO.' in all DataFrames
 for df in [stk_sum_df, rate_df, condition_df, alternative_df]:
     df['ITEM NO.'] = df['ITEM NO.'].apply(process_item_no)
+
+# Debug: Print ITEM NO. after processing
+for df_name, df in [('stk_sum_df', stk_sum_df), ('rate_df', rate_df), ('condition_df', condition_df), ('alternative_df', alternative_df)]:
+    print(f"{df_name} ITEM NO. after processing:")
+    print(df['ITEM NO.'].head())
 
 # Step 2: Multiply the 'QUANTITY' by 100
 stk_sum_df['QUANTITY'] = pd.to_numeric(stk_sum_df['QUANTITY'], errors='coerce') * 100
@@ -92,7 +86,9 @@ master_df = pd.merge(master_df, alternative_df, on='ITEM NO.', how='left')
 # Step 5: Merge with the rate data
 master_df = pd.merge(master_df, rate_df[['ITEM NO.', 'RATE']], on='ITEM NO.', how='left')
 
-print("master_df ITEM NO.:", master_df['ITEM NO.'].head())
+# Debug: Print master_df ITEM NO.
+print("master_df ITEM NO.:")
+print(master_df['ITEM NO.'].head())
 
 # Convert alternatives to string and handle NaN values by replacing them with empty strings
 for col in ['ALT1', 'ALT2', 'ALT3']:
@@ -139,6 +135,7 @@ st.markdown(
 logo_base64 = get_base64_image(logo_path)
 st.markdown(f'<img src="data:image/png;base64,{logo_base64}" class="logo">', unsafe_allow_html=True)
 
+last_update = get_file_modification_time(stk_sum_file_path)
 st.markdown(f'<p class="last-updated">Last Updated: {last_update}</p>', unsafe_allow_html=True)
 
 # Streamlit app header
@@ -183,6 +180,10 @@ if item_no:
     item_no = item_no.strip()
     # Process the item_no to match the format in master_df
     item_no_processed = process_item_no(item_no)
+    print("Item no entered:", item_no)
+    print("Item no processed:", item_no_processed)
+    print("Available ITEM NO.s:", master_df['ITEM NO.'].unique())
+
     # Check if ITEM NO. exists in master data
     item_row = master_df[master_df['ITEM NO.'] == item_no_processed]
 
