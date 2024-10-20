@@ -18,7 +18,7 @@ def generate_master_df():
    
 
     # Rename the columns to 'ITEM NO.' and 'Quantity'
-    df_stk_sum_cleaned.columns = ['ITEM NO.', 'Quantity']
+    df_stk_sum.columns = ['ITEM NO.', 'Quantity']
     df_stk_sum.columns = ['ITEM NO.', 'Quantity']
     df_stk_sum['ITEM NO.'] = df_stk_sum['ITEM NO.'].str.extract(r'(\d{4})')
     df_stk_sum['Quantity'] = df_stk_sum['Quantity'].astype(str).str.replace(' pcs', '').astype(float) * 100
