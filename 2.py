@@ -22,25 +22,23 @@ def get_file_modification_time(file_path):
 
 # Load the StkSum file, skipping the first 8 rows and without headers
 stk_sum_file_path = 'StkSum_new.xlsx'
-stk_sum_df = pd.read_excel(stk_sum_file_path, skiprows=8, header=None, names=['ITEM NO.', 'Quantity'])
-
-# Verify the columns
-#st.write("stk_sum_df columns:", stk_sum_df.columns.tolist())
+stk_sum_df = pd.read_excel(stk_sum_file_path, skiprows=8, header=None, names=['ITEM NO.', 'Quantity'], dtype={'ITEM NO.': str})
+print("stk_sum_df ITEM NO.:", stk_sum_df['ITEM NO.'].head())
 
 # Load the rate list file, adjust if necessary
 rate_file_path = 'rate list merged.xlsx'
-rate_df = pd.read_excel(rate_file_path, skiprows=3, header=None, names=['ITEM NO.', 'Rate'])
-
-# Verify the columns
-#st.write("rate_df columns:", rate_df.columns.tolist())
+rate_df = pd.read_excel(rate_file_path, skiprows=3, header=None, names=['ITEM NO.', 'Rate'], dtype={'ITEM NO.': str})
+print("rate_df ITEM NO.:", rate_df['ITEM NO.'].head())
 
 # Load the condition file
 condition_list_file_path = '1112.xlsx'
-condition_df = pd.read_excel(condition_list_file_path)
+condition_df = pd.read_excel(condition_list_file_path, dtype={'ITEM NO.': str})
+print("condition_df ITEM NO.:", condition_df['ITEM NO.'].head())
 
 # Load the alternative file
 alternative_list_file_path = 'STOCK ALTERNATION LIST.xlsx'
-alternative_df = pd.read_excel(alternative_list_file_path)
+alternative_df = pd.read_excel(alternative_list_file_path, dtype={'ITEM NO.': str})
+print("alternative_df ITEM NO.:", alternative_df['ITEM NO.'].head())
 
 # Function to standardize column names
 def standardize_column_names(df):
@@ -62,17 +60,21 @@ for df_name, df in [('stk_sum_df', stk_sum_df), ('rate_df', rate_df), ('conditio
 # Display last updated time based on file modification time
 last_update = get_file_modification_time(stk_sum_file_path)
 
-# Ensure 'ITEM NO.' columns are strings in all DataFrames
-for df in [stk_sum_df, rate_df, condition_df, alternative_df]:
-    df['ITEM NO.'] = df['ITEM NO.'].astype(str)
+# Ensure 'ITEM NO.' columns are strings and strip spaces
+for df_name, df in [('stk_sum_df', stk_sum_df), ('rate_df', rate_df), ('condition_df', condition_df), ('alternative_df', alternative_df)]:
+    df['ITEM NO.'] = df['ITEM NO.'].astype(str).str.strip()
+    print(f"After processing, {df_name} ITEM NO.:", df['ITEM NO.'].head())
 
 # Function to process ITEM NO.
 def process_item_no(item_no):
-    if isinstance(item_no, str):
-        parts = item_no.strip().split()
-        return parts[0] if parts else item_no
-    else:
-        return str(item_no).strip()
+    if pd.isnull(item_no):
+        return ''
+    item_no_str = str(item_no).strip()
+    # Remove '.0' from the end if present
+    if item_no_str.endswith('.0'):
+        item_no_str = item_no_str[:-2]
+    parts = item_no_str.split()
+    return parts[0] if parts else item_no_str
 
 # Apply processing to 'ITEM NO.' in all DataFrames
 for df in [stk_sum_df, rate_df, condition_df, alternative_df]:
@@ -89,6 +91,8 @@ master_df = pd.merge(master_df, alternative_df, on='ITEM NO.', how='left')
 
 # Step 5: Merge with the rate data
 master_df = pd.merge(master_df, rate_df[['ITEM NO.', 'RATE']], on='ITEM NO.', how='left')
+
+print("master_df ITEM NO.:", master_df['ITEM NO.'].head())
 
 # Convert alternatives to string and handle NaN values by replacing them with empty strings
 for col in ['ALT1', 'ALT2', 'ALT3']:
