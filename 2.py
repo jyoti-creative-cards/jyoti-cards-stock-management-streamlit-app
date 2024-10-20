@@ -16,7 +16,7 @@ master_df['CONDITION'] = pd.to_numeric(master_df['CONDITION'], errors='coerce')
 
 # Handle 'Alt1', 'Alt2', 'Alt3' columns
 for col in ['Alt1', 'Alt2', 'Alt3']:
-    master_df[col] = master_df[col].str.strip()
+    master_df[col] = master_df[col].astype(str).str.strip()
     master_df[col] = master_df[col].replace(['nan', 'None', 'NaN'], '')
     master_df[col] = master_df[col].str.replace(r'\.0$', '', regex=True)
 
@@ -120,11 +120,11 @@ if item_no:
         
         # Display stock status in colored box with Hindi messages
         if stock_status == 'Out of Stock':
-            st.markdown('<div style="background-color:#f8d7da; padding:10px; border-radius:5px;"><p style="color:#721c24;">यह आइटम स्टॉक में नहीं है, कृपया इसे मिलते जुलते आइटम नीचे देखें</p></div>', unsafe_allow_html=True)
+            st.markdown('<div style="background-color:#f8d7da; padding:10px; border-radius:5px;"><p style="color:#721c24;">यह आइटम स्टॉक में नहीं है</p></div>', unsafe_allow_html=True)
         elif stock_status == 'In Stock':
             st.markdown('<div style="background-color:#d4edda; padding:10px; border-radius:5px;"><p style="color:#155724;">यह आइटम स्टॉक में है</p></div>', unsafe_allow_html=True)
         else:
-            st.markdown('<div style="background-color:#fff3cd; padding:10px; border-radius:5px;"><p style="color:#856404;">यह आइटम का स्टॉक कम है, कृपया अधिक जानकारी के लिए गोदाम में संपर्क करें</p></div>', unsafe_allow_html=True)
+            st.markdown('<div style="background-color:#fff3cd; padding:10px; border-radius:5px;"><p style="color:#856404;">यह आइटम का स्टॉक कम है</p></div>', unsafe_allow_html=True)
         
         # Display rate
         formatted_rate = "{:.2f}".format(rate) if pd.notna(rate) else "N/A"
@@ -137,40 +137,39 @@ if item_no:
         else:
             st.markdown('<p class="result">इस आइटम नंबर के लिए कोई छवि उपलब्ध नहीं है।</p>', unsafe_allow_html=True)
         
-        # Only display alternatives when low stock or out of stock
-        if stock_status in ['Out of Stock', 'Low Stock']:
-            st.markdown("<h2>विकल्प</h2>", unsafe_allow_html=True)
-            for alt_item in [alt1, alt2, alt3]:
-                if alt_item and alt_item.strip() != '':
-                    alt_item = alt_item.strip()
-                    # Remove any decimal point if present
-                    alt_item = alt_item.replace('.0', '')
-                    alt_row = master_df[master_df['ITEM NO.'] == alt_item]
-                    if not alt_row.empty:
-                        alt_quantity = alt_row['Quantity'].values[0]
-                        alt_condition_value = alt_row['CONDITION'].values[0] if 'CONDITION' in alt_row.columns else None
-                        alt_rate = alt_row['Rate'].values[0] if 'Rate' in alt_row.columns else None
-                        formatted_alt_rate = "{:.2f}".format(alt_rate) if pd.notna(alt_rate) else "N/A"
-                        
-                        alt_stock_status = get_stock_status(alt_quantity, alt_condition_value)
-                        
-                        if alt_stock_status == 'Out of Stock':
-                            continue  # Skip alternatives that are out of stock
-                        else:
-                            # Display alternative stock status in Hindi
-                            if alt_stock_status == 'In Stock':
-                                alt_status_message = 'स्टॉक में उपलब्ध'
-                            else:
-                                alt_status_message = 'स्टॉक कम है'
-                            
-                            st.markdown(f'<p class="result">वैकल्पिक आइटम: {alt_item}, रेट: {formatted_alt_rate}, स्टॉक स्थिति: {alt_status_message}</p>', unsafe_allow_html=True)
-                            alt_image_path = get_image_path(alt_item)
-                            if alt_image_path:
-                                st.image(alt_image_path, caption=f'Image of {alt_item}', use_column_width=True)
-                            else:
-                                st.markdown(f'<p class="result">{alt_item} के लिए कोई छवि उपलब्ध नहीं है।</p>', unsafe_allow_html=True)
+        # Always display alternatives
+        st.markdown("<h2>विकल्प</h2>", unsafe_allow_html=True)
+        for alt_item in [alt1, alt2, alt3]:
+            # Ensure alt_item is a string and not NaN
+            alt_item = '' if pd.isna(alt_item) else str(alt_item).strip()
+            if alt_item != '' and alt_item.lower() != 'nan':
+                # Remove any decimal point if present
+                alt_item = alt_item.replace('.0', '')
+                alt_row = master_df[master_df['ITEM NO.'] == alt_item]
+                if not alt_row.empty:
+                    alt_quantity = alt_row['Quantity'].values[0]
+                    alt_condition_value = alt_row['CONDITION'].values[0] if 'CONDITION' in alt_row.columns else None
+                    alt_rate = alt_row['Rate'].values[0] if 'Rate' in alt_row.columns else None
+                    formatted_alt_rate = "{:.2f}".format(alt_rate) if pd.notna(alt_rate) else "N/A"
+                    
+                    alt_stock_status = get_stock_status(alt_quantity, alt_condition_value)
+                    
+                    # Display alternative stock status in Hindi
+                    if alt_stock_status == 'In Stock':
+                        alt_status_message = 'स्टॉक में उपलब्ध'
+                    elif alt_stock_status == 'Low Stock':
+                        alt_status_message = 'स्टॉक कम है'
                     else:
-                        st.markdown(f'<p class="result">वैकल्पिक आइटम {alt_item} उपलब्ध नहीं है।</p>', unsafe_allow_html=True)
+                        alt_status_message = 'स्टॉक उपलब्ध नहीं है'
+                    
+                    st.markdown(f'<p class="result">वैकल्पिक आइटम: {alt_item}, रेट: {formatted_alt_rate}, स्टॉक स्थिति: {alt_status_message}</p>', unsafe_allow_html=True)
+                    alt_image_path = get_image_path(alt_item)
+                    if alt_image_path:
+                        st.image(alt_image_path, caption=f'Image of {alt_item}', use_column_width=True)
+                    else:
+                        st.markdown(f'<p class="result">{alt_item} के लिए कोई छवि उपलब्ध नहीं है।</p>', unsafe_allow_html=True)
+                else:
+                    st.markdown(f'<p class="result">वैकल्पिक आइटम {alt_item} उपलब्ध नहीं है।</p>', unsafe_allow_html=True)
     else:
         st.markdown('<p class="result">आइटम नंबर उपलब्ध नहीं है</p>', unsafe_allow_html=True)
 else:
