@@ -13,8 +13,12 @@ def generate_master_df():
     condition_file = '1112.xlsx'
 
     # Load and process Stk Sum (Stock Summary) sheet
-    df_stk_sum = pd.read_excel(stk_sum_file)
+    df_stk_sum = pd.read_excel(stk_sum_file, usecols=[0, 1])
     df_stk_sum = df_stk_sum.iloc[7:].reset_index(drop=True)
+   
+
+    # Rename the columns to 'ITEM NO.' and 'Quantity'
+    df_stk_sum_cleaned.columns = ['ITEM NO.', 'Quantity']
     df_stk_sum.columns = ['ITEM NO.', 'Quantity']
     df_stk_sum['ITEM NO.'] = df_stk_sum['ITEM NO.'].str.extract(r'(\d{4})')
     df_stk_sum['Quantity'] = df_stk_sum['Quantity'].astype(str).str.replace(' pcs', '').astype(float) * 100
