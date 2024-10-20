@@ -1,7 +1,24 @@
 import streamlit as st
 import pandas as pd
 import os
-import pandas as pd
+from datetime import datetime
+import pytz
+
+# Function to fetch the last modification time of the StkSum file
+def get_file_modification_time(file_path):
+    if os.path.exists(file_path):
+        # Get the last modified time in UTC
+        mod_time = os.path.getmtime(file_path)
+        mod_datetime_utc = datetime.utcfromtimestamp(mod_time)
+
+        # Convert the UTC time to Indian Standard Time (UTC+5:30)
+        ist_timezone = pytz.timezone('Asia/Kolkata')
+        mod_datetime_ist = mod_datetime_utc.replace(tzinfo=pytz.utc).astimezone(ist_timezone)
+
+        # Format the IST time to the required format
+        return mod_datetime_ist.strftime('%d-%m-%Y %H:%M')
+    else:
+        return "File not found"
 
 # Load the data from the original files
 stk_sum_file = 'StkSum_new.xlsx'
@@ -10,18 +27,27 @@ alternate_list_file = 'ALTERNATE LIST 10 SEPT.xlsx'
 condition_file = '1112.xlsx'
 
 # Load and process Stk Sum (Stock Summary) sheet
-df_stk_sum = pd.read_excel(stk_sum_file)
-df_stk_sum = df_stk_sum.iloc[7:].reset_index(drop=True)
+# Skip the first 7 rows and specify header as None
+df_stk_sum = pd.read_excel(stk_sum_file, skiprows=7, header=None)
+# Now, select only the necessary columns
+df_stk_sum = df_stk_sum.iloc[:, [0, 1]]  # Assuming 'ITEM NO.' is in the first column and 'Quantity' in the second
 df_stk_sum.columns = ['ITEM NO.', 'Quantity']
-df_stk_sum['ITEM NO.'] = df_stk_sum['ITEM NO.'].str.extract(r'(\d{4})')
+
+# Debug: Check the columns
+# st.write("df_stk_sum columns:", df_stk_sum.columns.tolist())
+# st.write("df_stk_sum head:", df_stk_sum.head())
+
+df_stk_sum['ITEM NO.'] = df_stk_sum['ITEM NO.'].astype(str).str.extract(r'(\d{4})')
 df_stk_sum['Quantity'] = df_stk_sum['Quantity'].astype(str).str.replace(' pcs', '').astype(float) * 100
 df_stk_sum['Quantity'] = df_stk_sum['Quantity'].fillna(0).astype(int)
 
 # Load and process Rate List sheet
-df_rate_list = pd.read_excel(rate_list_file)
-df_rate_list = df_rate_list.iloc[3:].reset_index(drop=True)
+df_rate_list = pd.read_excel(rate_list_file, skiprows=3, header=None)
+# Assuming 'ITEM NO.' is in the first column and 'Rate' in the second
+df_rate_list = df_rate_list.iloc[:, [0, 1]]
 df_rate_list.columns = ['ITEM NO.', 'Rate']
-df_rate_list['ITEM NO.'] = df_rate_list['ITEM NO.'].str.extract(r'(\d{4})')
+
+df_rate_list['ITEM NO.'] = df_rate_list['ITEM NO.'].astype(str).str.extract(r'(\d{4})')
 df_rate_list['Rate'] = pd.to_numeric(df_rate_list['Rate'], errors='coerce').fillna(0).astype(float)
 
 # Load and process Alternate List sheet
@@ -123,8 +149,9 @@ st.markdown(
 logo_base64 = get_base64_image(logo_path)
 st.markdown(f'<img src="data:image/png;base64,{logo_base64}" class="logo">', unsafe_allow_html=True)
 
-# You can update this with the actual last update time if needed
-st.markdown(f'<p class="last-updated">Last Updated: {pd.to_datetime("today").strftime("%d-%m-%Y %H:%M")}</p>', unsafe_allow_html=True)
+# Get the last updated time of the StkSum_new.xlsx file
+last_update = get_file_modification_time(stk_sum_file)
+st.markdown(f'<p class="last-updated">Last Updated: {last_update}</p>', unsafe_allow_html=True)
 
 # Streamlit app header
 st.markdown('<h1 class="title">Jyoti Cards Stock Status</h1>', unsafe_allow_html=True)
@@ -149,11 +176,11 @@ if item_no:
     item_no = item_no.strip()
     # Remove any decimal point if present
     item_no = item_no.replace('.0', '')
-    print("Item number entered:", item_no)
-    
+    # print("Item number entered:", item_no)  # Uncomment for debugging
+
     # Check if ITEM NO. exists in master data
     item_row = master_df[master_df['ITEM NO.'] == item_no]
-    
+
     if not item_row.empty:
         quantity = item_row['Quantity'].values[0]
         condition_value = item_row['CONDITION'].values[0] if 'CONDITION' in item_row.columns else None
@@ -161,9 +188,9 @@ if item_no:
         alt1 = item_row['Alt1'].values[0] if 'Alt1' in item_row.columns else ''
         alt2 = item_row['Alt2'].values[0] if 'Alt2' in item_row.columns else ''
         alt3 = item_row['Alt3'].values[0] if 'Alt3' in item_row.columns else ''
-        
+
         stock_status = get_stock_status(quantity, condition_value)
-        
+
         # Display stock status in colored box with Hindi messages
         if stock_status == 'Out of Stock':
             st.markdown('<div style="background-color:#f8d7da; padding:10px; border-radius:5px;"><p style="color:#721c24;">यह आइटम स्टॉक में नहीं है</p></div>', unsafe_allow_html=True)
@@ -171,18 +198,18 @@ if item_no:
             st.markdown('<div style="background-color:#d4edda; padding:10px; border-radius:5px;"><p style="color:#155724;">यह आइटम स्टॉक में है</p></div>', unsafe_allow_html=True)
         else:
             st.markdown('<div style="background-color:#fff3cd; padding:10px; border-radius:5px;"><p style="color:#856404;">यह आइटम का स्टॉक कम है</p></div>', unsafe_allow_html=True)
-        
+
         # Display rate
         formatted_rate = "{:.2f}".format(rate) if pd.notna(rate) else "N/A"
         st.markdown(f'<p class="result">रेट: {formatted_rate}</p>', unsafe_allow_html=True)
-        
+
         # Display image
         image_path = get_image_path(item_no)
         if image_path:
             st.image(image_path, caption=f'Image of {item_no}', use_column_width=True)
         else:
             st.markdown('<p class="result">इस आइटम नंबर के लिए कोई छवि उपलब्ध नहीं है।</p>', unsafe_allow_html=True)
-        
+
         # Always display alternatives
         st.markdown("<h2>विकल्प</h2>", unsafe_allow_html=True)
         for alt_item in [alt1, alt2, alt3]:
@@ -197,9 +224,9 @@ if item_no:
                     alt_condition_value = alt_row['CONDITION'].values[0] if 'CONDITION' in alt_row.columns else None
                     alt_rate = alt_row['Rate'].values[0] if 'Rate' in alt_row.columns else None
                     formatted_alt_rate = "{:.2f}".format(alt_rate) if pd.notna(alt_rate) else "N/A"
-                    
+
                     alt_stock_status = get_stock_status(alt_quantity, alt_condition_value)
-                    
+
                     # Display alternative stock status in Hindi
                     if alt_stock_status == 'In Stock':
                         alt_status_message = 'स्टॉक में उपलब्ध'
@@ -207,7 +234,7 @@ if item_no:
                         alt_status_message = 'स्टॉक कम है'
                     else:
                         alt_status_message = 'स्टॉक उपलब्ध नहीं है'
-                    
+
                     st.markdown(f'<p class="result">वैकल्पिक आइटम: {alt_item}, रेट: {formatted_alt_rate}, स्टॉक स्थिति: {alt_status_message}</p>', unsafe_allow_html=True)
                     alt_image_path = get_image_path(alt_item)
                     if alt_image_path:
