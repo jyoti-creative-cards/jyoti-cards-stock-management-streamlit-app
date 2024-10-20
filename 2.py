@@ -9,7 +9,7 @@ def generate_master_df():
     # Load the data from the original files
     stk_sum_file = 'StkSum_new.xlsx'
     rate_list_file = 'rate list merged.xlsx'
-    alternate_list_file = 'ALTERNATE LIST 10 SEPT (2).xlsx'
+    alternate_list_file = 'ALTERNATE LIST 10 SEPT.xlsx'
     condition_file = '1112.xlsx'
 
     # Load and process Stk Sum (Stock Summary) sheet
