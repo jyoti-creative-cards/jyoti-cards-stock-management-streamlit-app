@@ -4,14 +4,15 @@ import os
 import streamlit as st
 import pandas as pd
 
+# File paths
+stk_sum_file = 'StkSum_new.xlsx'
+rate_list_file = 'rate list merged.xlsx'
+alternate_list_file = 'STOCK ALTERNATION LIST.xlsx'
+condition_file = '1112.xlsx'
+
 # Load and process the data to regenerate the master_df on every app run
 def generate_master_df():
-    # Load the data from the original files
-    stk_sum_file = 'StkSum_new.xlsx'
-    rate_list_file = 'rate list merged.xlsx'
-    alternate_list_file = 'STOCK ALTERNATION LIST.xlsx'
-    condition_file = '1112.xlsx'
-
+    global stk_sum_file, rate_list_file, alternate_list_file, condition_file
     # Load and process Stk Sum (Stock Summary) sheet
     df_stk_sum = pd.read_excel(stk_sum_file, usecols=[0, 1])
     df_stk_sum = df_stk_sum.iloc[7:].reset_index(drop=True)
@@ -63,6 +64,10 @@ def generate_master_df():
 
 # Regenerate master_df on app run
 master_df = generate_master_df()
+
+# Get the last modified time of 'stk_sum_file'
+modification_time = os.path.getmtime(stk_sum_file)
+last_update_time = datetime.datetime.fromtimestamp(modification_time)
 
 # Ensure that 'ITEM NO.' is a string without any decimal points
 master_df['ITEM NO.'] = master_df['ITEM NO.'].str.strip()
@@ -137,8 +142,11 @@ st.markdown(
 logo_base64 = get_base64_image(logo_path)
 st.markdown(f'<img src="data:image/png;base64,{logo_base64}" class="logo">', unsafe_allow_html=True)
 
-# You can update this with the actual last update time if needed
-st.markdown(f'<p class="last-updated">Last Updated: {pd.to_datetime("today").strftime("%d-%m-%Y %H:%M")}</p>', unsafe_allow_html=True)
+# Update the Last Updated time display
+st.markdown(
+    f'<p class="last-updated">Last Updated: {last_update_time.strftime("%d-%m-%Y %H:%M")}</p>',
+    unsafe_allow_html=True
+)
 
 # Streamlit app header
 st.markdown('<h1 class="title">Jyoti Cards Stock Status</h1>', unsafe_allow_html=True)
