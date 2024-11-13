@@ -187,7 +187,7 @@ if item_no:
         
         # Display stock status in colored box with Hindi messages
         if stock_status == 'Out of Stock':
-            st.markdown('<div style="background-color:#f8d7da; padding:10px; border-radius:5px;"><p style="color:#721c24;">यह आइटम स्टॉक में नहीं है, अधिक जानकारी के लिए गोदाम पर संपर्क करें</p></div>', unsafe_allow_html=True)
+            st.markdown('<div style="background-color:#f8d7da; padding:10px; border-radius:5px;"><p style="color:#721c24;">यह आइटम का स्टॉक कम है, कृपया शिग्र गोदाम पर बुक करें</p></div>', unsafe_allow_html=True)
        # Adjusted 'In Stock' message
         elif stock_status == 'In Stock':
             st.markdown(
@@ -237,7 +237,7 @@ if item_no:
                     elif alt_stock_status == 'Low Stock':
                         alt_status_message = 'स्टॉक कम है'
                     else:
-                        alt_status_message = 'स्टॉक उपलब्ध नहीं है'
+                        alt_status_message = 'स्टॉक कम है'
                     
                     st.markdown(f'<p class="result">वैकल्पिक आइटम: {alt_item}, रेट: {formatted_alt_rate}, स्टॉक स्थिति: {alt_status_message}</p>', unsafe_allow_html=True)
                     alt_image_path = get_image_path(alt_item)
