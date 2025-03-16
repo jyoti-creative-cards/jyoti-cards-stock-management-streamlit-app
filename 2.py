@@ -15,7 +15,7 @@ last_update_time = datetime.datetime.fromtimestamp(modification_time)
 
 def generate_master_df():
     # Load and process Stock Summary (StkSum) sheet
-    df_stk_sum = pd.read_excel(stk_sum_file, usecols=[0, 1])
+    df_stk_sum = pd.read_excel(stk_sum_file, usecols=[0, 2])
     df_stk_sum = df_stk_sum.iloc[7:].reset_index(drop=True)
     df_stk_sum.columns = ['ITEM NO.', 'Quantity']
     # Extract one or more digits and trim any extra spaces
