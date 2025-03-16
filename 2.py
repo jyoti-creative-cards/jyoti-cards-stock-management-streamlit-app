@@ -14,11 +14,11 @@ modification_time = os.path.getmtime(stk_sum_file)
 last_update_time = datetime.datetime.fromtimestamp(modification_time)
 
 def generate_master_df():
-    # Load and process Stock Summary (StkSum) sheet
+    # Load and process Stock Summary (StkSum) sheet using columns A and C (indexes 0 and 2)
     df_stk_sum = pd.read_excel(stk_sum_file, usecols=[0, 2])
     df_stk_sum = df_stk_sum.iloc[7:].reset_index(drop=True)
     df_stk_sum.columns = ['ITEM NO.', 'Quantity']
-    # Extract one or more digits and trim any extra spaces
+    # Extract digits and trim any extra spaces
     df_stk_sum['ITEM NO.'] = df_stk_sum['ITEM NO.'].astype(str).str.extract(r'(\d+)', expand=False).str.strip()
     df_stk_sum['Quantity'] = (df_stk_sum['Quantity'].astype(str)
                               .str.replace(' pcs', '')
@@ -152,38 +152,30 @@ if item_no:
         quantity = item_row['Quantity'].values[0]
         condition_value = item_row['CONDITION'].values[0] if 'CONDITION' in item_row.columns else None
         rate = item_row['Rate'].values[0] if 'Rate' in item_row.columns else None
-        alt1 = item_row['Alt1'].values[0] if 'Alt1' in item_row.columns else ''
-        alt2 = item_row['Alt2'].values[0] if 'Alt2' in item_row.columns else ''
-        alt3 = item_row['Alt3'].values[0] if 'Alt3' in item_row.columns else ''
-        
-        # Debug info printed on the UI:
-        #st.markdown("### Debug Info")
-        #st.write(f"Item No: {item_no}")
-        #st.write(f"Quantity: {quantity}")
-        #st.write(f"Condition: {condition_value}")
-        #st.write(f"Rate: {rate}")
+        # Instead of using merged Alt1, Alt2, Alt3 from master_df, re-read alternate list for alternatives:
+        df_alt = pd.read_excel(alternate_list_file)
+        df_alt['ITEM NO.'] = df_alt['ITEM NO.'].astype(str).str.strip()
+        alt_row = df_alt[df_alt['ITEM NO.'] == item_no]
         
         stock_status = get_stock_status(quantity, condition_value)
         
         if stock_status == 'In Stock':
-            # Show main item details only
             st.markdown(
                 '<div style="background-color:#d4edda; padding:10px; border-radius:5px;">'
                 '<p style="color:#155724;">यह आइटम स्टॉक में है,<br>(कृपया गोदाम पर बुकिंग के लिए कॉल करें)</p></div>',
                 unsafe_allow_html=True
             )
         else:
-            # For Out of Stock or Low Stock, show status message and available alternatives
             if stock_status == 'Out of Stock':
                 st.markdown(
                     '<div style="background-color:#f8d7da; padding:10px; border-radius:5px;">'
-                    '<p style="color:#721c24;">यह आइटम का स्टॉक कम है, कृपया शिग्र गोदाम पर बुक करें</p></div>',
+                    '<p style="color:#721c24;">यह आइटम का स्टॉक कम है, कृपया शीघ्र गोदाम पर बुक करें</p></div>',
                     unsafe_allow_html=True
                 )
             else:
                 st.markdown(
                     '<div style="background-color:#fff3cd; padding:10px; border-radius:5px;">'
-                    '<p style="color:#856404;">यह आइटम का स्टॉक कम है, कृपया शिग्र गोदाम पर बुक करें</p></div>',
+                    '<p style="color:#856404;">यह आइटम का स्टॉक कम है, कृपया शीघ्र गोदाम पर बुक करें</p></div>',
                     unsafe_allow_html=True
                 )
         
@@ -197,71 +189,40 @@ if item_no:
         else:
             st.markdown('<p class="result">इस आइटम नंबर के लिए कोई छवि उपलब्ध नहीं है।</p>', unsafe_allow_html=True)
         
-        # Show alternatives only if the main item is not "In Stock"
+        # Show alternatives only if main item is not in stock and alternative info exists
         if stock_status != 'In Stock':
             st.markdown("<h2>विकल्प</h2>", unsafe_allow_html=True)
-            for alt_item in [alt1, alt2, alt3]:
-                alt_item = '' if pd.isna(alt_item) else str(alt_item).strip()
-                if alt_item and alt_item.lower() != 'nan':
-                    alt_item = alt_item.replace('.0', '')
-                    alt_row = master_df[master_df['ITEM NO.'] == alt_item]
-                    if not alt_row.empty:
-                        alt_quantity = alt_row['Quantity'].values[0]
-                        alt_condition_value = alt_row['CONDITION'].values[0] if 'CONDITION' in alt_row.columns else None
-                        alt_stock_status = get_stock_status(alt_quantity, alt_condition_value)
-                        # Only show alternatives that are in stock
-                        if alt_stock_status == 'In Stock':
-                            alt_rate = alt_row['Rate'].values[0]
-                            formatted_alt_rate = "{:.2f}".format(alt_rate) if pd.notna(alt_rate) else "N/A"
-                            st.markdown(
-                                f'<p class="result">वैकल्पिक आइटम: {alt_item}, रेट: {formatted_alt_rate}, स्टॉक स्थिति: स्टॉक में उपलब्ध</p>',
-                                unsafe_allow_html=True
-                            )
-                            alt_image_path = get_image_path(alt_item)
-                            if alt_image_path:
-                                st.image(alt_image_path, caption=f'Image of {alt_item}', use_container_width=True)
+            if not alt_row.empty:
+                alt1, alt2, alt3 = alt_row.iloc[0][['Alt1', 'Alt2', 'Alt3']]
+                for alt_item in [alt1, alt2, alt3]:
+                    alt_item = '' if pd.isna(alt_item) else str(alt_item).strip()
+                    if alt_item and alt_item.lower() != 'nan':
+                        alt_item = alt_item.replace('.0', '')
+                        alt_master_row = master_df[master_df['ITEM NO.'] == alt_item]
+                        if not alt_master_row.empty:
+                            alt_quantity = alt_master_row['Quantity'].values[0]
+                            alt_condition_value = alt_master_row['CONDITION'].values[0] if 'CONDITION' in alt_master_row.columns else None
+                            alt_stock_status = get_stock_status(alt_quantity, alt_condition_value)
+                            if alt_stock_status == 'In Stock':
+                                alt_rate = alt_master_row['Rate'].values[0]
+                                formatted_alt_rate = "{:.2f}".format(alt_rate) if pd.notna(alt_rate) else "N/A"
+                                st.markdown(
+                                    f'<p class="result">वैकल्पिक आइटम: {alt_item}, रेट: {formatted_alt_rate}, स्टॉक स्थिति: स्टॉक में उपलब्ध</p>',
+                                    unsafe_allow_html=True
+                                )
+                                alt_image_path = get_image_path(alt_item)
+                                if alt_image_path:
+                                    st.image(alt_image_path, caption=f'Image of {alt_item}', use_container_width=True)
+                                else:
+                                    st.markdown(f'<p class="result">{alt_item} के लिए कोई छवि उपलब्ध नहीं है।</p>', unsafe_allow_html=True)
                             else:
-                                st.markdown(f'<p class="result">{alt_item} के लिए कोई छवि उपलब्ध नहीं है।</p>', unsafe_allow_html=True)
+                                st.markdown(f'<p class="result">वैकल्पिक आइटम: {alt_item} का स्टॉक उपलब्ध नहीं है।</p>', unsafe_allow_html=True)
                         else:
-                            st.markdown(f'<p class="result">वैकल्पिक आइटम: {alt_item} का स्टॉक उपलब्ध नहीं है।</p>', unsafe_allow_html=True)
-                    else:
-                        st.markdown(f'<p class="result">वैकल्पिक आइटम {alt_item} उपलब्ध नहीं है।</p>', unsafe_allow_html=True)
+                            st.markdown(f'<p class="result">वैकल्पिक आइटम {alt_item} उपलब्ध नहीं है।</p>', unsafe_allow_html=True)
+            else:
+                st.markdown('<p class="result">इस आइटम के लिए कोई वैकल्पिक आइटम उपलब्ध नहीं हैं।</p>', unsafe_allow_html=True)
     else:
-        # Main item not found; try to retrieve alternatives from alternate list file
-        st.markdown('<p class="result">मुख्य आइटम उपलब्ध नहीं है। वैकल्पिक आइटम दिखाए जा रहे हैं:</p>', unsafe_allow_html=True)
-        df_alternate = pd.read_excel(alternate_list_file)
-        df_alternate['ITEM NO.'] = df_alternate['ITEM NO.'].astype(str).str.strip()
-        alt_row = df_alternate[df_alternate['ITEM NO.'] == item_no]
-        if not alt_row.empty:
-            alt1, alt2, alt3 = alt_row.iloc[0][['Alt1', 'Alt2', 'Alt3']]
-            st.markdown("<h2>विकल्प</h2>", unsafe_allow_html=True)
-            for alt_item in [alt1, alt2, alt3]:
-                alt_item = '' if pd.isna(alt_item) else str(alt_item).strip()
-                if alt_item and alt_item.lower() != 'nan':
-                    alt_item = alt_item.replace('.0', '')
-                    alt_data = master_df[master_df['ITEM NO.'] == alt_item]
-                    if not alt_data.empty:
-                        alt_quantity = alt_data['Quantity'].values[0]
-                        alt_condition_value = alt_data['CONDITION'].values[0] if 'CONDITION' in alt_data.columns else None
-                        alt_stock_status = get_stock_status(alt_quantity, alt_condition_value)
-                        if alt_stock_status == 'In Stock':
-                            alt_rate = alt_data['Rate'].values[0]
-                            formatted_alt_rate = "{:.2f}".format(alt_rate) if pd.notna(alt_rate) else "N/A"
-                            st.markdown(
-                                f'<p class="result">वैकल्पिक आइटम: {alt_item}, रेट: {formatted_alt_rate}, स्टॉक स्थिति: स्टॉक में उपलब्ध</p>',
-                                unsafe_allow_html=True
-                            )
-                            alt_image_path = get_image_path(alt_item)
-                            if alt_image_path:
-                                st.image(alt_image_path, caption=f'Image of {alt_item}', use_container_width=True)
-                            else:
-                                st.markdown(f'<p class="result">{alt_item} के लिए कोई छवि उपलब्ध नहीं है।</p>', unsafe_allow_html=True)
-                        else:
-                            st.markdown(f'<p class="result">वैकल्पिक आइटम: {alt_item} का स्टॉक उपलब्ध नहीं है।</p>', unsafe_allow_html=True)
-                    else:
-                        st.markdown(f'<p class="result">वैकल्पिक आइटम {alt_item} उपलब्ध नहीं है।</p>', unsafe_allow_html=True)
-        else:
-            st.markdown('<p class="result">इस आइटम के लिए कोई वैकल्पिक आइटम उपलब्ध नहीं हैं।</p>', unsafe_allow_html=True)
+        st.markdown('<p class="result">मुख्य आइटम उपलब्ध नहीं है।</p>', unsafe_allow_html=True)
 else:
     st.markdown('<p class="result">कृपया एक आइटम नंबर दर्ज करें</p>', unsafe_allow_html=True)
 
