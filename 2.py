@@ -152,9 +152,10 @@ if item_no:
         quantity = item_row['Quantity'].values[0]
         condition_value = item_row['CONDITION'].values[0] if 'CONDITION' in item_row.columns else None
         rate = item_row['Rate'].values[0] if 'Rate' in item_row.columns else None
+        
         # Instead of using merged Alt1, Alt2, Alt3 from master_df, re-read alternate list for alternatives:
         df_alt = pd.read_excel(alternate_list_file)
-        df_alt['ITEM NO.'] = df_alt['ITEM NO.'].astype(str).str.strip()
+        df_alt['ITEM NO.'] = df_alt['ITEM NO.'].astype(str).str.extract(r'(\d+)', expand=False).str.strip()
         alt_row = df_alt[df_alt['ITEM NO.'] == item_no]
         
         stock_status = get_stock_status(quantity, condition_value)
