@@ -157,11 +157,11 @@ if item_no:
         alt3 = item_row['Alt3'].values[0] if 'Alt3' in item_row.columns else ''
         
         # Debug info printed on the UI:
-        st.markdown("### Debug Info")
-        st.write(f"Item No: {item_no}")
-        st.write(f"Quantity: {quantity}")
-        st.write(f"Condition: {condition_value}")
-        st.write(f"Rate: {rate}")
+        #st.markdown("### Debug Info")
+        #st.write(f"Item No: {item_no}")
+        #st.write(f"Quantity: {quantity}")
+        #st.write(f"Condition: {condition_value}")
+        #st.write(f"Rate: {rate}")
         
         stock_status = get_stock_status(quantity, condition_value)
         
