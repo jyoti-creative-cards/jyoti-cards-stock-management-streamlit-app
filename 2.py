@@ -148,13 +148,20 @@ if item_no:
     item_row = master_df[master_df['ITEM NO.'] == item_no]
     
     if not item_row.empty:
-        # Main item exists
+        # Main item exists: extract values
         quantity = item_row['Quantity'].values[0]
         condition_value = item_row['CONDITION'].values[0] if 'CONDITION' in item_row.columns else None
         rate = item_row['Rate'].values[0] if 'Rate' in item_row.columns else None
         alt1 = item_row['Alt1'].values[0] if 'Alt1' in item_row.columns else ''
         alt2 = item_row['Alt2'].values[0] if 'Alt2' in item_row.columns else ''
         alt3 = item_row['Alt3'].values[0] if 'Alt3' in item_row.columns else ''
+        
+        # Debug info printed on the UI:
+        st.markdown("### Debug Info")
+        st.write(f"Item No: {item_no}")
+        st.write(f"Quantity: {quantity}")
+        st.write(f"Condition: {condition_value}")
+        st.write(f"Rate: {rate}")
         
         stock_status = get_stock_status(quantity, condition_value)
         
