@@ -35,7 +35,7 @@ def generate_master_df():
     # Load and process Alternate List sheet
     df_alternate = pd.read_excel(alternate_list_file)
     df_alternate = df_alternate[['ITEM NO.', 'Alt1', 'Alt2', 'Alt3']]
-    df_alternate['ITEM NO.'] = df_alternate['ITEM NO.'].astype(str).str.strip()
+    df_alternate['ITEM NO.'] = df_alternate['ITEM NO.'].astype(str).str.extract(r'(\d+)', expand=False).str.strip()
     df_alternate[['Alt1', 'Alt2', 'Alt3']] = df_alternate[['Alt1', 'Alt2', 'Alt3']].astype(str)
 
     # Load and process Condition sheet
