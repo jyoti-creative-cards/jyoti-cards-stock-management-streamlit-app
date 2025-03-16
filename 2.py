@@ -18,33 +18,33 @@ def generate_master_df():
     df_stk_sum = pd.read_excel(stk_sum_file, usecols=[0, 1])
     df_stk_sum = df_stk_sum.iloc[7:].reset_index(drop=True)
     df_stk_sum.columns = ['ITEM NO.', 'Quantity']
-    df_stk_sum['ITEM NO.'] = df_stk_sum['ITEM NO.'].str.extract(r'(\d{4})')
-    df_stk_sum['Quantity'] = df_stk_sum['Quantity'].astype(str) \
-                                                .str.replace(' pcs', '') \
-                                                .astype(float) * 100
+    # Extract one or more digits and trim any extra spaces
+    df_stk_sum['ITEM NO.'] = df_stk_sum['ITEM NO.'].astype(str).str.extract(r'(\d+)', expand=False).str.strip()
+    df_stk_sum['Quantity'] = (df_stk_sum['Quantity'].astype(str)
+                              .str.replace(' pcs', '')
+                              .astype(float) * 100)
     df_stk_sum['Quantity'] = df_stk_sum['Quantity'].fillna(0).astype(int)
 
     # Load and process Rate List sheet
     df_rate_list = pd.read_excel(rate_list_file)
     df_rate_list = df_rate_list.iloc[3:].reset_index(drop=True)
     df_rate_list.columns = ['ITEM NO.', 'Rate']
-    df_rate_list['ITEM NO.'] = df_rate_list['ITEM NO.'].str.extract(r'(\d{4})')
-    df_rate_list['Rate'] = pd.to_numeric(df_rate_list['Rate'], errors='coerce') \
-                           .fillna(0).astype(float)
+    df_rate_list['ITEM NO.'] = df_rate_list['ITEM NO.'].astype(str).str.extract(r'(\d+)', expand=False).str.strip()
+    df_rate_list['Rate'] = pd.to_numeric(df_rate_list['Rate'], errors='coerce').fillna(0).astype(float)
 
     # Load and process Alternate List sheet
     df_alternate = pd.read_excel(alternate_list_file)
     df_alternate = df_alternate[['ITEM NO.', 'Alt1', 'Alt2', 'Alt3']]
-    df_alternate['ITEM NO.'] = df_alternate['ITEM NO.'].astype(str)
+    df_alternate['ITEM NO.'] = df_alternate['ITEM NO.'].astype(str).str.strip()
     df_alternate[['Alt1', 'Alt2', 'Alt3']] = df_alternate[['Alt1', 'Alt2', 'Alt3']].astype(str)
 
     # Load and process Condition sheet
     df_condition = pd.read_excel(condition_file)
     df_condition.columns = ['ITEM NO.', 'CONDITION']
-    df_condition['ITEM NO.'] = df_condition['ITEM NO.'].astype(str)
-    df_condition['ITEM NO.'] = df_condition['ITEM NO.'].str.extract(r'(\d{4})')
-    df_condition['CONDITION'] = pd.to_numeric(df_condition['CONDITION'], errors='coerce') \
-                                .fillna(0)
+    df_condition['ITEM NO.'] = df_condition['ITEM NO.'].astype(str)\
+                                               .str.extract(r'(\d+)', expand=False)\
+                                               .str.strip()
+    df_condition['CONDITION'] = pd.to_numeric(df_condition['CONDITION'], errors='coerce').fillna(0)
 
     # Merge all datasets into one master dataframe
     master_df = df_stk_sum.merge(df_rate_list, on='ITEM NO.', how='left') \
@@ -223,7 +223,7 @@ if item_no:
         # Main item not found; try to retrieve alternatives from alternate list file
         st.markdown('<p class="result">मुख्य आइटम उपलब्ध नहीं है। वैकल्पिक आइटम दिखाए जा रहे हैं:</p>', unsafe_allow_html=True)
         df_alternate = pd.read_excel(alternate_list_file)
-        df_alternate['ITEM NO.'] = df_alternate['ITEM NO.'].astype(str)
+        df_alternate['ITEM NO.'] = df_alternate['ITEM NO.'].astype(str).str.strip()
         alt_row = df_alternate[df_alternate['ITEM NO.'] == item_no]
         if not alt_row.empty:
             alt1, alt2, alt3 = alt_row.iloc[0][['Alt1', 'Alt2', 'Alt3']]
