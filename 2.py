@@ -5,8 +5,8 @@ import datetime
 import pytz
 
 tz = pytz.timezone('Asia/Kolkata') 
-modification_time = os.path.getmtime(stk_sum_file)
-last_update_time = datetime.datetime.fromtimestamp(modification_time, tz)
+#modification_time = os.path.getmtime(stk_sum_file)
+
 
 st.markdown(
     f'Last Updated: {last_update_time.strftime("%d-%m-%Y %H:%M")}'
@@ -18,7 +18,8 @@ alternate_list_file = 'STOCK ALTERNATION LIST.xlsx'
 condition_file = '1112.xlsx'
 
 # Use the file's modification time as the "Last Updated" time
-#modification_time = os.path.getmtime(stk_sum_file)
+modification_time = os.path.getmtime(stk_sum_file)
+last_update_time = datetime.datetime.fromtimestamp(modification_time, tz)
 #last_update_time = datetime.datetime.fromtimestamp(modification_time)
 
 def generate_master_df():
