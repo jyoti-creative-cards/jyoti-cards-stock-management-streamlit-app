@@ -20,9 +20,6 @@ modification_time = os.path.getmtime(stk_sum_file)
 last_update_time = datetime.datetime.fromtimestamp(modification_time, tz)
 #last_update_time = datetime.datetime.fromtimestamp(modification_time)
 
-st.markdown(
-    f'Last Updated: {last_update_time.strftime("%d-%m-%Y %H:%M")}'
-)
 
 def generate_master_df():
     # Load and process Stock Summary (StkSum) sheet using columns A and C (indexes 0 and 2)
