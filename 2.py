@@ -8,9 +8,7 @@ tz = pytz.timezone('Asia/Kolkata')
 #modification_time = os.path.getmtime(stk_sum_file)
 
 
-st.markdown(
-    f'Last Updated: {last_update_time.strftime("%d-%m-%Y %H:%M")}'
-)
+
 # File paths
 stk_sum_file = 'StkSum_new.xlsx'
 rate_list_file = 'rate list merged.xlsx'
@@ -19,8 +17,12 @@ condition_file = '1112.xlsx'
 
 # Use the file's modification time as the "Last Updated" time
 modification_time = os.path.getmtime(stk_sum_file)
-#last_update_time = datetime.datetime.fromtimestamp(modification_time, tz)
-last_update_time = datetime.datetime.fromtimestamp(modification_time)
+last_update_time = datetime.datetime.fromtimestamp(modification_time, tz)
+#last_update_time = datetime.datetime.fromtimestamp(modification_time)
+
+st.markdown(
+    f'Last Updated: {last_update_time.strftime("%d-%m-%Y %H:%M")}'
+)
 
 def generate_master_df():
     # Load and process Stock Summary (StkSum) sheet using columns A and C (indexes 0 and 2)
