@@ -19,8 +19,8 @@ condition_file = '1112.xlsx'
 
 # Use the file's modification time as the "Last Updated" time
 modification_time = os.path.getmtime(stk_sum_file)
-last_update_time = datetime.datetime.fromtimestamp(modification_time, tz)
-#last_update_time = datetime.datetime.fromtimestamp(modification_time)
+#last_update_time = datetime.datetime.fromtimestamp(modification_time, tz)
+last_update_time = datetime.datetime.fromtimestamp(modification_time)
 
 def generate_master_df():
     # Load and process Stock Summary (StkSum) sheet using columns A and C (indexes 0 and 2)
