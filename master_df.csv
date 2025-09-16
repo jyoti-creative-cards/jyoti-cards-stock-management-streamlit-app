@@ -1,5 +1,5 @@
 ITEM NO.,Quantity,Rate,Alt1,Alt2,Alt3,CONDITION
-1817,12900,1.2,1850.0,1851.0,1852.0,1000.0
+1817,129,1.2,1850.0,1851.0,1852.0,1000.0
 1850,7350,2.5,None,None,None,1000.0
 1851,7450,2.5,None,None,None,1000.0
 1852,6000,2.7,None,None,None,1000.0
@@ -631,3 +631,4 @@ ITEM NO.,Quantity,Rate,Alt1,Alt2,Alt3,CONDITION
 9955,4750,7.0,None,None,None,400.0
 2024,-47,19.5,nan,nan,nan,200.0
 ,2934536,Not Available,None,None,None,Not Available
+
