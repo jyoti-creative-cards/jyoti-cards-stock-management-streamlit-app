@@ -4,6 +4,7 @@ import os
 import datetime
 import pytz
 import base64
+import re
 
 # ---------- Page + Theme ----------
 st.set_page_config(page_title="Jyoti Cards Stock", layout="centered")
@@ -32,13 +33,6 @@ def get_base64_image(image_path: str) -> str | None:
     with open(image_path, 'rb') as f:
         return base64.b64encode(f.read()).decode()
 
-def get_image_path(item_no: str) -> str | None:
-    for ext in ['jpeg', 'jpg', 'png']:
-        image_path = os.path.join('static', f'{item_no}.{ext}')
-        if os.path.exists(image_path):
-            return image_path
-    return None
-
 def as_clean_item_no(x) -> str:
     """
     Normalize item number to a plain numeric string, stripping any .0, spaces, or text.
@@ -46,12 +40,70 @@ def as_clean_item_no(x) -> str:
     if pd.isna(x):
         return ""
     s = str(x).strip()
-    # keep only digits
-    import re
     m = re.search(r'(\d+)', s)
     if not m:
         return ""
     return m.group(1)
+
+def _digits(s: str) -> str:
+    """Keep only digits and drop leading zeros for robust comparison."""
+    d = "".join(ch for ch in str(s) if ch.isdigit())
+    return d.lstrip('0') or d  # if all zeros, keep as-is
+
+def get_image_path(item_no: str) -> str | None:
+    """
+    Robust image finder:
+    1) Try static/{item_no}.{ext} (jpg/jpeg/png)
+    2) Recursively search under static/ and match by digits of item_no
+       so files like 'item_012345 Front.JPG' or 'images/12345.png' will match '12345'.
+    Returns the first best match found.
+    """
+    if not item_no:
+        return None
+
+    want = _digits(item_no)
+    if not want:
+        return None
+
+    # 1) Direct exact paths in root 'static'
+    for ext in ['jpg', 'jpeg', 'png', 'JPG', 'JPEG', 'PNG']:
+        p = os.path.join('static', f'{item_no}.{ext}')
+        if os.path.exists(p):
+            return p
+
+    # 2) Recursive search
+    exts = {'.jpg', '.jpeg', '.png', '.JPG', '.JPEG', '.PNG'}
+    best = None
+    best_score = (999, 999999)  # (match_score, path_length)
+
+    for root, _, files in os.walk('static'):
+        for fname in files:
+            _, ext = os.path.splitext(fname)
+            if ext not in exts:
+                continue
+            full = os.path.join(root, fname)
+            name_no_ext = os.path.splitext(fname)[0]
+            name_digits = _digits(name_no_ext)
+
+            # Scoring: lower is better
+            # 0: digits match AND stem equals item_no exactly
+            # 1: digits match
+            # 2: want digits is substring of full filename digits
+            score = None
+            if name_digits == want and name_no_ext == item_no:
+                score = 0
+            elif name_digits == want:
+                score = 1
+            elif want and want in _digits(fname):
+                score = 2
+
+            if score is not None:
+                cand_score = (score, len(full))
+                if cand_score < best_score:
+                    best_score = cand_score
+                    best = full
+
+    return best
 
 def get_stock_status(quantity, condition_value):
     """
@@ -89,7 +141,6 @@ def load_frames():
     # Alternate list
     df_alt = pd.read_excel(alternate_list_file)
     # Expecting columns: ITEM NO., Alt1, Alt2, Alt3
-    # If different, adjust here.
     expected_cols = ['ITEM NO.', 'Alt1', 'Alt2', 'Alt3']
     missing = [c for c in expected_cols if c not in df_alt.columns]
     if missing:
