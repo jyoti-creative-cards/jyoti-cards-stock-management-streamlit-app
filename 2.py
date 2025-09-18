@@ -11,13 +11,14 @@ st.set_page_config(page_title="Jyoti Cards Stock", layout="centered")
 
 # ---------- Constants ----------
 tz = pytz.timezone('Asia/Kolkata')
-stk_sum_file = 'StkSum_new.xlsx'
-rate_list_file = 'rate list merged.xlsx'
-alternate_list_file = 'STOCK ALTERNATION LIST.xlsx'
-condition_file = '1112.xlsx'
+stk_sum_file = 'StkSum_new.xlsx'                # Source for ITEM NO. + Qty
+rate_list_file = 'rate list merged.xlsx'        # Source for Rate
+alternate_list_file = 'STOCK ALTERNATION LIST.xlsx'  # Source for Alt1/Alt2/Alt3
+condition_file = '1112.xlsx'                    # Source for CONDITION
 phone_number = "07312456565"
 logo_path = 'static/jyoti logo-1.png'
 call_icon_url = 'static/call_icon.png'
+MASTER_DF_OUT = 'master_df.xlsx'                # We will write the latest master here
 
 # ---------- Helpers ----------
 def safe_file_mtime(path: str) -> datetime.datetime | None:
@@ -26,6 +27,12 @@ def safe_file_mtime(path: str) -> datetime.datetime | None:
         return datetime.datetime.fromtimestamp(ts, tz)
     except Exception:
         return None
+
+def file_mtime_num(path: str) -> float:
+    try:
+        return os.path.getmtime(path)
+    except Exception:
+        return 0.0
 
 def get_base64_image(image_path: str) -> str | None:
     if not os.path.exists(image_path):
@@ -54,9 +61,7 @@ def get_image_path(item_no: str) -> str | None:
     """
     Robust image finder:
     1) Try static/{item_no}.{ext} (jpg/jpeg/png)
-    2) Recursively search under static/ and match by digits of item_no
-       so files like 'item_012345 Front.JPG' or 'images/12345.png' will match '12345'.
-    Returns the first best match found.
+    2) Recursively search under static/ and match by digits of item_no.
     """
     if not item_no:
         return None
@@ -85,10 +90,6 @@ def get_image_path(item_no: str) -> str | None:
             name_no_ext = os.path.splitext(fname)[0]
             name_digits = _digits(name_no_ext)
 
-            # Scoring: lower is better
-            # 0: digits match AND stem equals item_no exactly
-            # 1: digits match
-            # 2: want digits is substring of full filename digits
             score = None
             if name_digits == want and name_no_ext == item_no:
                 score = 0
@@ -117,36 +118,40 @@ def get_stock_status(quantity, condition_value):
         return 'In Stock'
     return 'In Stock' if quantity > condition_value else 'Low Stock'
 
+# ---------- Data pipeline (auto-rebuild when any file changes) ----------
 @st.cache_data(show_spinner=False)
-def load_frames():
-    # StkSum A,C (0,2)
+def build_master_df(_stk_m, _rate_m, _alt_m, _cond_m):
+    """
+    Build a unified master_df from 4 source files.
+    Cache key = file mtimes → refreshes automatically when files change.
+    Also writes the latest master to MASTER_DF_OUT (Excel).
+    """
+    # --- StkSum: take columns A (ITEM NO.) and C (Quantity), rows after header offset ---
     df_stk_sum = pd.read_excel(stk_sum_file, usecols=[0, 2])
+    # Your original UI used df.iloc[7:], keep same logic:
     df_stk_sum = df_stk_sum.iloc[7:].reset_index(drop=True)
     df_stk_sum.columns = ['ITEM NO.', 'Quantity']
     df_stk_sum['ITEM NO.'] = df_stk_sum['ITEM NO.'].apply(as_clean_item_no)
+    # Quantity like "12 pcs" → numeric, *100
     df_stk_sum['Quantity'] = (
-        df_stk_sum['Quantity'].astype(str)
-        .str.replace(' pcs', '', regex=False)
+        df_stk_sum['Quantity'].astype(str).str.replace(' pcs', '', regex=False)
     )
     df_stk_sum['Quantity'] = pd.to_numeric(df_stk_sum['Quantity'], errors='coerce').fillna(0) * 100
     df_stk_sum['Quantity'] = df_stk_sum['Quantity'].astype(int)
 
-    # Rate list
+    # --- Rate list (separate file) ---
     df_rate_list = pd.read_excel(rate_list_file)
     df_rate_list = df_rate_list.iloc[3:].reset_index(drop=True)
     df_rate_list.columns = ['ITEM NO.', 'Rate']
     df_rate_list['ITEM NO.'] = df_rate_list['ITEM NO.'].apply(as_clean_item_no)
     df_rate_list['Rate'] = pd.to_numeric(df_rate_list['Rate'], errors='coerce').fillna(0.0)
 
-    # Alternate list
+    # --- Alternate list ---
     df_alt = pd.read_excel(alternate_list_file)
-    # Expecting columns: ITEM NO., Alt1, Alt2, Alt3
     expected_cols = ['ITEM NO.', 'Alt1', 'Alt2', 'Alt3']
-    missing = [c for c in expected_cols if c not in df_alt.columns]
-    if missing:
-        # try to coerce to expected naming if possible
+    if any(c not in df_alt.columns for c in expected_cols):
+        # Coerce first column as 'ITEM NO.' and ensure Alt1..Alt3 exist
         df_alt = df_alt.rename(columns={df_alt.columns[0]: 'ITEM NO.'})
-        # ensure missing alts exist
         for c in ['Alt1', 'Alt2', 'Alt3']:
             if c not in df_alt.columns:
                 df_alt[c] = ""
@@ -154,33 +159,52 @@ def load_frames():
     for c in ['Alt1', 'Alt2', 'Alt3']:
         df_alt[c] = df_alt[c].apply(as_clean_item_no)
 
-    # Condition sheet
+    # --- Condition sheet ---
     df_condition = pd.read_excel(condition_file)
     df_condition.columns = ['ITEM NO.', 'CONDITION']
     df_condition['ITEM NO.'] = df_condition['ITEM NO.'].apply(as_clean_item_no)
     df_condition['CONDITION'] = pd.to_numeric(df_condition['CONDITION'], errors='coerce')
 
-    return df_stk_sum, df_rate_list, df_alt, df_condition
-
-@st.cache_data(show_spinner=False)
-def build_master_df():
-    df_stk_sum, df_rate_list, df_alt, df_condition = load_frames()
+    # --- Merge → master ---
     master = (
         df_stk_sum
         .merge(df_rate_list, on='ITEM NO.', how='left')
         .merge(df_alt, on='ITEM NO.', how='left')
         .merge(df_condition, on='ITEM NO.', how='left')
     )
-    # Clean types
+
+    # Clean up types and blanks
     master['Rate'] = pd.to_numeric(master['Rate'], errors='coerce')
     master['CONDITION'] = pd.to_numeric(master['CONDITION'], errors='coerce')
     for c in ['Alt1', 'Alt2', 'Alt3']:
+        if c not in master.columns:
+            master[c] = ""
         master[c] = master[c].fillna("").astype(str)
+
+    # Save a copy (optional but requested)
+    try:
+        master.to_excel(MASTER_DF_OUT, index=False)
+    except Exception:
+        # If saving fails (e.g., file open), ignore silently for the UI
+        pass
+
     return master
 
-# ---------- Data ----------
-master_df = build_master_df()
-_, _, alt_df, _ = load_frames()  # for quick alt lookups without re-reading files
+# Compute mtimes for cache-busting
+stk_m = file_mtime_num(stk_sum_file)
+rate_m = file_mtime_num(rate_list_file)
+alt_m  = file_mtime_num(alternate_list_file)
+cond_m = file_mtime_num(condition_file)
+
+# Optional: a quick "Reload" to clear cache manually
+reload_col, _ = st.columns([1, 6])
+with reload_col:
+    if st.button("🔄 Reload data"):
+        build_master_df.clear()
+
+# Build master & a small alt view
+master_df = build_master_df(stk_m, rate_m, alt_m, cond_m)
+alt_df = master_df[['ITEM NO.', 'Alt1', 'Alt2', 'Alt3']].copy()
 
 # ---------- Styling ----------
 st.markdown(
