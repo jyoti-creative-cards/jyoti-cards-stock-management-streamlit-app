@@ -22,13 +22,13 @@ logo_path = 'static/jyoti logo-1.png'
 call_icon_url = 'static/call_icon.png'
 MASTER_DF_OUT = 'master_df.xlsx'                     # Latest merged sheet
 
-# ====== PROMO BANNERS (ROTATE THESE LINES) ======
-BANNERS = [
-    "New arrivals now available",
-    "Special Diwali discount",
-    "Festive combos — order now",
-]
-# ===============================================
+# ====== SINGLE OFFER BANNER (EDIT HERE) ======
+OFFER_ENABLED = True
+OFFER_TEXT = "New arrivals now available"
+# Example options (keep commented and swap when needed):
+# OFFER_TEXT = "Special Diwali discount"
+# OFFER_TEXT = "Festive combos — order now"
+# =============================================
 
 # ---------- Helpers ----------
 def safe_file_mtime(path: str) -> datetime.datetime | None:
@@ -205,48 +205,26 @@ st.markdown(
     <style>
       .stApp { background-color: #ffffff; }
 
-      /* Rotating banner (ticker) */
-      .ticker {
-          overflow: hidden;
-          height: 36px;
-          display: flex;
-          justify-content: center;
-          align-items: center;
+      /* Single colorful offer banner */
+      .offer {
+          margin: 0.2rem auto 0.5rem auto;
+          padding: 10px 16px;
+          border-radius: 999px;
+          font-weight: 800;
+          text-align: center;
+          max-width: 680px;
+          color: white;
           background: linear-gradient(90deg, #ef4444, #f59e0b, #22c55e, #3b82f6, #a855f7);
           background-size: 300% 300%;
           animation: moveGradient 8s ease infinite;
-          color: #fff;
-          border-radius: 999px;
-          margin: 0.3rem auto 0.5rem auto;
           box-shadow: 0 6px 16px rgba(0,0,0,0.10);
-          max-width: 680px;
-          padding: 0 14px;
-          font-weight: 800;
           letter-spacing: 0.3px;
-          font-size: 0.95rem;
-      }
-      .ticker-inner {
-          display: inline-block;
-          animation: slideUp 8s infinite;
-      }
-      .ticker-line {
-          display: block;
-          text-align: center;
-          line-height: 36px;
+          font-size: 1.0rem;
       }
       @keyframes moveGradient {
           0% { background-position: 0% 50%; }
           50% { background-position: 100% 50%; }
           100% { background-position: 0% 50%; }
-      }
-      @keyframes slideUp {
-          0% { transform: translateY(0%); }
-          33% { transform: translateY(0%); }
-          36% { transform: translateY(-100%); }
-          66% { transform: translateY(-100%); }
-          69% { transform: translateY(-200%); }
-          99% { transform: translateY(-200%); }
-          100% { transform: translateY(0%); }
       }
 
       /* Sticky header container */
@@ -279,7 +257,7 @@ st.markdown(
       .status-low { background-color:#fff3cd; color:#856404; }
       .result { font-size: 1.05rem; }
 
-      /* Alternatives grid */
+      /* Alternatives grid as product cards */
       .alt-grid {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
@@ -374,14 +352,9 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# ---------- Rotating banner (top, not sticky) ----------
-if BANNERS:
-    st.markdown('<div class="ticker"><div class="ticker-inner">', unsafe_allow_html=True)
-    for line in BANNERS:
-        st.markdown(f'<span class="ticker-line">{line}</span>', unsafe_allow_html=True)
-    # repeat first line to make loop seamless
-    st.markdown(f'<span class="ticker-line">{BANNERS[0]}</span>', unsafe_allow_html=True)
-    st.markdown('</div></div>', unsafe_allow_html=True)
+# ---------- SINGLE offer banner (top, not sticky) ----------
+if OFFER_ENABLED and OFFER_TEXT:
+    st.markdown(f'<div class="offer">{OFFER_TEXT}</div>', unsafe_allow_html=True)
 
 # ---------- Sticky: Heading + Last Updated + Search ----------
 st.markdown('<div class="sticky-top">', unsafe_allow_html=True)
