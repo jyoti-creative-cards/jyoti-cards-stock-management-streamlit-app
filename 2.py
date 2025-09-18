@@ -12,7 +12,7 @@ st.set_page_config(page_title="Jyoti Cards Stock", layout="centered")
 # ---------- Constants ----------
 tz = pytz.timezone('Asia/Kolkata')
 stk_sum_file = 'StkSum_new.xlsx'                # Source for ITEM NO. + Qty
-rate_list_file = 'rate list merged.xlsx'        # Source for Rate
+rate_list_file = 'rate list merged.xlsx'        # (Kept in pipeline but NOT shown on UI)
 alternate_list_file = 'STOCK ALTERNATION LIST.xlsx'  # Source for Alt1/Alt2/Alt3
 condition_file = '1112.xlsx'                    # Source for CONDITION
 phone_number = "07312456565"
@@ -118,6 +118,7 @@ def get_stock_status(quantity, condition_value):
 # ---------- Data pipeline (auto-rebuild when any file changes) ----------
 @st.cache_data(show_spinner=False)
 def build_master_df(_stk_m, _rate_m, _alt_m, _cond_m):
+    # StkSum (ITEM NO., Quantity)
     df_stk_sum = pd.read_excel(stk_sum_file, usecols=[0, 2])
     df_stk_sum = df_stk_sum.iloc[7:].reset_index(drop=True)
     df_stk_sum.columns = ['ITEM NO.', 'Quantity']
@@ -128,12 +129,14 @@ def build_master_df(_stk_m, _rate_m, _alt_m, _cond_m):
     df_stk_sum['Quantity'] = pd.to_numeric(df_stk_sum['Quantity'], errors='coerce').fillna(0) * 100
     df_stk_sum['Quantity'] = df_stk_sum['Quantity'].astype(int)
 
+    # Rate list (kept but not displayed)
     df_rate_list = pd.read_excel(rate_list_file)
     df_rate_list = df_rate_list.iloc[3:].reset_index(drop=True)
     df_rate_list.columns = ['ITEM NO.', 'Rate']
     df_rate_list['ITEM NO.'] = df_rate_list['ITEM NO.'].apply(as_clean_item_no)
     df_rate_list['Rate'] = pd.to_numeric(df_rate_list['Rate'], errors='coerce').fillna(0.0)
 
+    # Alternate list
     df_alt = pd.read_excel(alternate_list_file)
     expected_cols = ['ITEM NO.', 'Alt1', 'Alt2', 'Alt3']
     if any(c not in df_alt.columns for c in expected_cols):
@@ -145,19 +148,22 @@ def build_master_df(_stk_m, _rate_m, _alt_m, _cond_m):
     for c in ['Alt1', 'Alt2', 'Alt3']:
         df_alt[c] = df_alt[c].apply(as_clean_item_no)
 
+    # Condition sheet
     df_condition = pd.read_excel(condition_file)
     df_condition.columns = ['ITEM NO.', 'CONDITION']
     df_condition['ITEM NO.'] = df_condition['ITEM NO.'].apply(as_clean_item_no)
     df_condition['CONDITION'] = pd.to_numeric(df_condition['CONDITION'], errors='coerce')
 
+    # Merge → master
     master = (
         df_stk_sum
-        .merge(df_rate_list, on='ITEM NO.', how='left')
+        .merge(df_rate_list, on='ITEM NO.', how='left')   # rate is merged but not shown
         .merge(df_alt, on='ITEM NO.', how='left')
         .merge(df_condition, on='ITEM NO.', how='left')
     )
 
-    master['Rate'] = pd.to_numeric(master['Rate'], errors='coerce')
+    # Types & blanks
+    master['Rate'] = pd.to_numeric(master['Rate'], errors='coerce')                 # REMAINS but UNUSED on UI
     master['CONDITION'] = pd.to_numeric(master['CONDITION'], errors='coerce')
     for c in ['Alt1', 'Alt2', 'Alt3']:
         if c not in master.columns:
@@ -229,7 +235,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# ---------- NEW: Offer banner (very top) ----------
+# ---------- Offer banner ----------
 if OFFER_ENABLED and OFFER_TEXT:
     st.markdown(f'<div class="offer">{OFFER_TEXT}</div>', unsafe_allow_html=True)
 
@@ -242,7 +248,7 @@ if last_update_time:
         unsafe_allow_html=True
     )
 
-# ---------- Search box (Hindi prompt) ----------
+# ---------- Search box ----------
 with st.container():
     st.markdown('<div class="search-wrap">', unsafe_allow_html=True)
     item_no = st.text_input('🔍 कृपया आइटम नंबर यहाँ डालें', value="", placeholder="उदा. 12345").strip().replace('.0', '')
@@ -260,10 +266,10 @@ with st.container():
         if not item_row.empty:
             quantity = pd.to_numeric(item_row['Quantity'].values[0], errors='coerce')
             condition_value = pd.to_numeric(item_row['CONDITION'].values[0], errors='coerce') if 'CONDITION' in item_row.columns else float('nan')
-            rate = pd.to_numeric(item_row['Rate'].values[0], errors='coerce') if 'Rate' in item_row.columns else float('nan')
 
             stock_status = get_stock_status(quantity, condition_value)
 
+            # STATUS ONLY (no rate)
             if stock_status == 'In Stock':
                 st.markdown('<div class="status-badge status-in">यह आइटम स्टॉक में है (कृपया गोदाम पर बुकिंग के लिए कॉल करें)</div>', unsafe_allow_html=True)
             elif stock_status == 'Out of Stock':
@@ -271,15 +277,14 @@ with st.container():
             else:
                 st.markdown('<div class="status-badge status-low">यह आइटम का स्टॉक <b>कम</b> है, कृपया शीघ्र गोदाम पर बुक करें।</div>', unsafe_allow_html=True)
 
-            formatted_rate = "N/A" if pd.isna(rate) else f"{rate:.2f}"
-            st.markdown(f'<p class="result"><b>रेट:</b> {formatted_rate}</p>', unsafe_allow_html=True)
-
+            # Image
             img_path = get_image_path(clean_item)
             if img_path:
                 st.image(img_path, caption=f'Image of {clean_item}', use_container_width=True)
             else:
                 st.markdown('<p class="result">इस आइटम नंबर के लिए कोई छवि उपलब्ध नहीं है।</p>', unsafe_allow_html=True)
 
+            # Alternatives (only for Out of Stock)
             if stock_status == 'Out of Stock':
                 st.markdown("<h3>विकल्प</h3>", unsafe_allow_html=True)
                 alt_row = alt_df[alt_df['ITEM NO.'] == clean_item]
@@ -299,12 +304,11 @@ with st.container():
                                 alt_qty = pd.to_numeric(alt_master_row['Quantity'].values[0], errors='coerce')
                                 alt_cond = pd.to_numeric(alt_master_row['CONDITION'].values[0], errors='coerce') if 'CONDITION' in alt_master_row.columns else float('nan')
                                 alt_status = get_stock_status(alt_qty, alt_cond)
-                                alt_rate = pd.to_numeric(alt_master_row['Rate'].values[0], errors='coerce')
-                                formatted_alt_rate = "N/A" if pd.isna(alt_rate) else f"{alt_rate:.2f}"
 
+                                # RATE REMOVED HERE
                                 if alt_status == 'In Stock':
                                     st.markdown(
-                                        f'<p class="result">वैकल्पिक आइटम: <b>{alt_item}</b>, रेट: {formatted_alt_rate}, स्टॉक स्थिति: <b>स्टॉक में उपलब्ध</b></p>',
+                                        f'<p class="result">वैकल्पिक आइटम: <b>{alt_item}</b> — <b>स्टॉक में उपलब्ध</b></p>',
                                         unsafe_allow_html=True
                                     )
                                     alt_img = get_image_path(alt_item)
@@ -314,7 +318,7 @@ with st.container():
                                         st.markdown(f'<p class="result">{alt_item} के लिए कोई छवि उपलब्ध नहीं है।</p>', unsafe_allow_html=True)
                                 else:
                                     st.markdown(
-                                        f'<p class="result">वैकल्पिक आइटम: <b>{alt_item}</b> स्टॉक में उपलब्ध नहीं है।</p>',
+                                        f'<p class="result">वैकल्पिक आइटम: <b>{alt_item}</b> — स्टॉक में उपलब्ध नहीं है।</p>',
                                         unsafe_allow_html=True
                                     )
                             else:
