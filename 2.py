@@ -5,20 +5,22 @@ import datetime
 import pytz
 import base64
 import re
+from urllib.parse import quote  # for WhatsApp message encoding
 
 # ---------- Page + Theme ----------
 st.set_page_config(page_title="Jyoti Cards Stock", layout="centered")
 
 # ---------- Constants ----------
 tz = pytz.timezone('Asia/Kolkata')
-stk_sum_file = 'StkSum_new.xlsx'                # Source for ITEM NO. + Qty
-rate_list_file = 'rate list merged.xlsx'        # (Kept in pipeline but NOT shown on UI)
+stk_sum_file = 'StkSum_new.xlsx'                     # Source for ITEM NO. + Qty
+rate_list_file = 'rate list merged.xlsx'             # (Kept in pipeline but NOT shown on UI)
 alternate_list_file = 'STOCK ALTERNATION LIST.xlsx'  # Source for Alt1/Alt2/Alt3
-condition_file = '1112.xlsx'                    # Source for CONDITION
-phone_number = "07312456565"
+condition_file = '1112.xlsx'                         # Source for CONDITION
+phone_number = "07312456565"                         # Call phone number
+whatsapp_phone = "9754656565"                        # WhatsApp phone number (no + or spaces)
 logo_path = 'static/jyoti logo-1.png'
 call_icon_url = 'static/call_icon.png'
-MASTER_DF_OUT = 'master_df.xlsx'                # Latest merged sheet
+MASTER_DF_OUT = 'master_df.xlsx'                     # Latest merged sheet
 
 # ====== OFFER BANNER SETTINGS (EDIT HERE) ======
 OFFER_ENABLED = True
@@ -60,7 +62,7 @@ def as_clean_item_no(x) -> str:
 def _digits(s: str) -> str:
     """Keep only digits and drop leading zeros for robust comparison."""
     d = "".join(ch for ch in str(s) if ch.isdigit())
-    return d.lstrip('0') or d  # if all zeros, keep as-is
+    return d.lstrip('0') or d
 
 def get_image_path(item_no: str) -> str | None:
     """
@@ -157,13 +159,13 @@ def build_master_df(_stk_m, _rate_m, _alt_m, _cond_m):
     # Merge → master
     master = (
         df_stk_sum
-        .merge(df_rate_list, on='ITEM NO.', how='left')   # rate is merged but not shown
+        .merge(df_rate_list, on='ITEM NO.', how='left')   # rate merged but not shown
         .merge(df_alt, on='ITEM NO.', how='left')
         .merge(df_condition, on='ITEM NO.', how='left')
     )
 
     # Types & blanks
-    master['Rate'] = pd.to_numeric(master['Rate'], errors='coerce')                 # REMAINS but UNUSED on UI
+    master['Rate'] = pd.to_numeric(master['Rate'], errors='coerce')
     master['CONDITION'] = pd.to_numeric(master['CONDITION'], errors='coerce')
     for c in ['Alt1', 'Alt2', 'Alt3']:
         if c not in master.columns:
@@ -199,8 +201,10 @@ st.markdown(
     """
     <style>
       .stApp { background-color: #ffffff; }
+
+      /* Offer banner */
       .offer {
-          margin: 0.4rem auto 0.6rem auto;
+          margin: 0.2rem auto 0.4rem auto;
           padding: 8px 14px;
           border-radius: 999px;
           font-weight: 800;
@@ -218,28 +222,48 @@ st.markdown(
           50% { background-position: 100% 50%; }
           100% { background-position: 0% 50%; }
       }
-      .title { font-size: 2.2em; color: #1f3a8a; font-weight: 700; text-align: center; margin: 0.2em 0 0 0; }
-      .last-updated { text-align:center; color:#475569; margin: 0 0 1rem 0; font-size: 0.95rem; }
-      .search-wrap { max-width: 680px; margin: 0 auto 1.0rem auto; }
+
+      /* Sticky header container */
+      .sticky-top {
+          position: sticky;
+          top: 0;
+          z-index: 100;
+          backdrop-filter: saturate(180%) blur(6px);
+          background: rgba(255,255,255,0.92);
+          border-bottom: 1px solid #f1f5f9;
+          padding-bottom: 8px;
+      }
+
+      .title { font-size: 2.0em; color: #1f3a8a; font-weight: 700; text-align: center; margin: 0.2em 0 0 0; }
+      .last-updated { text-align:center; color:#475569; margin: 0 0 0.6rem 0; font-size: 0.92rem; }
+      .search-wrap { max-width: 680px; margin: 0.2rem auto 0.6rem auto; }
+
       .card { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 16px 18px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
       .status-badge { border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; font-weight: 600; }
       .status-in { background-color:#d4edda; color:#155724; }
       .status-out { background-color:#f8d7da; color:#721c24; }
       .status-low { background-color:#fff3cd; color:#856404; }
       .result { font-size: 1.05rem; }
+
+      .cta-row { margin-top: 10px; }
       .call-cta { border: 1px solid #fecaca; background: #fee2e2; color: #991b1b; padding: 10px 14px; border-radius: 12px; display: flex; align-items: center; gap: 12px; justify-content: center; font-weight: 600; }
-      .call-link { display:inline-flex; gap:8px; align-items:center; text-decoration:none; border:1px solid #ddd; border-radius:10px; padding:8px 12px; background:#ffffff; }
+      .link-btn { display:inline-flex; gap:8px; align-items:center; text-decoration:none; border:1px solid #ddd; border-radius:10px; padding:8px 12px; background:#ffffff; font-weight:600; }
+      .wa-btn { border-color:#86efac; }
+      .wa-btn:hover { background:#ecfeff; }
+      .call-btn:hover { background:#f8fafc; }
+
       footer { visibility: hidden; } /* hide default Streamlit footer */
     </style>
     """,
     unsafe_allow_html=True
 )
 
-# ---------- Offer banner ----------
+# ---------- Offer banner (top, not sticky) ----------
 if OFFER_ENABLED and OFFER_TEXT:
     st.markdown(f'<div class="offer">{OFFER_TEXT}</div>', unsafe_allow_html=True)
 
-# ---------- TOP: Heading + Last Updated ----------
+# ---------- Sticky: Heading + Last Updated + Search ----------
+st.markdown('<div class="sticky-top">', unsafe_allow_html=True)
 st.markdown('<h1 class="title">Jyoti Cards Stock Status</h1>', unsafe_allow_html=True)
 last_update_time = safe_file_mtime(stk_sum_file)
 if last_update_time:
@@ -247,12 +271,10 @@ if last_update_time:
         f'<p class="last-updated">Last Updated: {last_update_time.strftime("%d-%m-%Y %H:%M")}</p>',
         unsafe_allow_html=True
     )
-
-# ---------- Search box ----------
-with st.container():
-    st.markdown('<div class="search-wrap">', unsafe_allow_html=True)
-    item_no = st.text_input('🔍 कृपया आइटम नंबर यहाँ डालें', value="", placeholder="उदा. 12345").strip().replace('.0', '')
-    st.markdown('</div>', unsafe_allow_html=True)
+st.markdown('<div class="search-wrap">', unsafe_allow_html=True)
+item_no = st.text_input('🔍 कृपया आइटम नंबर यहाँ डालें', value="", placeholder="उदा. 12345").strip().replace('.0', '')
+st.markdown('</div>', unsafe_allow_html=True)
+st.markdown('</div>', unsafe_allow_html=True)  # end sticky
 
 # ---------- Main Output Card ----------
 with st.container():
@@ -305,7 +327,6 @@ with st.container():
                                 alt_cond = pd.to_numeric(alt_master_row['CONDITION'].values[0], errors='coerce') if 'CONDITION' in alt_master_row.columns else float('nan')
                                 alt_status = get_stock_status(alt_qty, alt_cond)
 
-                                # RATE REMOVED HERE
                                 if alt_status == 'In Stock':
                                     st.markdown(
                                         f'<p class="result">वैकल्पिक आइटम: <b>{alt_item}</b> — <b>स्टॉक में उपलब्ध</b></p>',
@@ -334,24 +355,25 @@ with st.container():
     else:
         st.markdown('<div class="card"><p class="result">कृपया एक आइटम नंबर दर्ज करें</p></div>', unsafe_allow_html=True)
 
-# ---------- Call section (red highlight + button) ----------
+# ---------- Call & WhatsApp section ----------
 with st.container():
-    st.markdown('<div style="height:10px;"></div>', unsafe_allow_html=True)
-    call_cols = st.columns([3, 2])
+    st.markdown('<div class="cta-row"></div>', unsafe_allow_html=True)
+    call_cols = st.columns([3, 1, 1])  # text | call | whatsapp
     with call_cols[0]:
         st.markdown(
             '<div class="call-cta">📞 ऑर्डर बुक करने या अधिक जानकारी के लिए संपर्क करें</div>',
             unsafe_allow_html=True
         )
     with call_cols[1]:
+        # Call button
         if os.path.exists(call_icon_url):
             call_icon_base64 = get_base64_image(call_icon_url)
             if call_icon_base64:
                 st.markdown(
                     f'''
                     <div style="display:flex; align-items:center; height:100%; justify-content:center;">
-                        <a href="tel:{phone_number}" class="call-link">
-                            <img src="data:image/png;base64,{call_icon_base64}" width="20" height="20" alt="Call Icon"> Call
+                        <a href="tel:{phone_number}" class="link-btn call-btn">
+                            <img src="data:image/png;base64,{call_icon_base64}" width="18" height="18" alt="Call"> Call
                         </a>
                     </div>
                     ''',
@@ -359,6 +381,23 @@ with st.container():
                 )
         else:
             st.link_button("Call", f"tel:{phone_number}")
+
+    with call_cols[2]:
+        # WhatsApp button (prefilled text in Hindi with item number if available)
+        if 'item_no' in locals() and item_no.strip():
+            clean_item_for_wa = as_clean_item_no(item_no)
+            wa_text = f"नमस्ते, मुझे आइटम {clean_item_for_wa} की अधिक जानकारी चाहिए।"
+        else:
+            wa_text = "नमस्ते, मुझे स्टॉक की जानकारी चाहिए।"
+        wa_url = f"https://wa.me/{whatsapp_phone}?text={quote(wa_text)}"
+        st.markdown(
+            f'''
+            <div style="display:flex; align-items:center; height:100%; justify-content:center;">
+                <a href="{wa_url}" target="_blank" class="link-btn wa-btn">💬 WhatsApp</a>
+            </div>
+            ''',
+            unsafe_allow_html=True
+        )
 
 # ---------- Bottom: Logo ----------
 logo_b64 = get_base64_image(logo_path)
