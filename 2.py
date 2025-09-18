@@ -18,7 +18,12 @@ condition_file = '1112.xlsx'                    # Source for CONDITION
 phone_number = "07312456565"
 logo_path = 'static/jyoti logo-1.png'
 call_icon_url = 'static/call_icon.png'
-MASTER_DF_OUT = 'master_df.xlsx'                # We will write the latest master here
+MASTER_DF_OUT = 'master_df.xlsx'                # Latest merged sheet
+
+# ====== OFFER BANNER SETTINGS (EDIT HERE) ======
+OFFER_ENABLED = True
+OFFER_TEXT = "Today’s Offer — 5% off"
+# ==============================================
 
 # ---------- Helpers ----------
 def safe_file_mtime(path: str) -> datetime.datetime | None:
@@ -59,8 +64,7 @@ def _digits(s: str) -> str:
 
 def get_image_path(item_no: str) -> str | None:
     """
-    Robust image finder:
-    1) Try static/{item_no}.{ext} (jpg/jpeg/png)
+    1) Try static/{item_no}.{ext}
     2) Recursively search under static/ and match by digits of item_no.
     """
     if not item_no:
@@ -70,16 +74,14 @@ def get_image_path(item_no: str) -> str | None:
     if not want:
         return None
 
-    # 1) Direct exact paths in root 'static'
     for ext in ['jpg', 'jpeg', 'png', 'JPG', 'JPEG', 'PNG']:
         p = os.path.join('static', f'{item_no}.{ext}')
         if os.path.exists(p):
             return p
 
-    # 2) Recursive search
     exts = {'.jpg', '.jpeg', '.png', '.JPG', '.JPEG', '.PNG'}
     best = None
-    best_score = (999, 999999)  # (match_score, path_length)
+    best_score = (999, 999999)
 
     for root, _, files in os.walk('static'):
         for fname in files:
@@ -107,11 +109,6 @@ def get_image_path(item_no: str) -> str | None:
     return best
 
 def get_stock_status(quantity, condition_value):
-    """
-    Out of Stock: quantity is NaN or 0
-    In Stock    : condition is NaN OR quantity > condition
-    Low Stock   : otherwise (quantity <= condition and quantity > 0)
-    """
     if pd.isna(quantity) or quantity == 0:
         return 'Out of Stock'
     if pd.isna(condition_value):
@@ -121,36 +118,25 @@ def get_stock_status(quantity, condition_value):
 # ---------- Data pipeline (auto-rebuild when any file changes) ----------
 @st.cache_data(show_spinner=False)
 def build_master_df(_stk_m, _rate_m, _alt_m, _cond_m):
-    """
-    Build a unified master_df from 4 source files.
-    Cache key = file mtimes → refreshes automatically when files change.
-    Also writes the latest master to MASTER_DF_OUT (Excel).
-    """
-    # --- StkSum: take columns A (ITEM NO.) and C (Quantity), rows after header offset ---
     df_stk_sum = pd.read_excel(stk_sum_file, usecols=[0, 2])
-    # Your original UI used df.iloc[7:], keep same logic:
     df_stk_sum = df_stk_sum.iloc[7:].reset_index(drop=True)
     df_stk_sum.columns = ['ITEM NO.', 'Quantity']
     df_stk_sum['ITEM NO.'] = df_stk_sum['ITEM NO.'].apply(as_clean_item_no)
-    # Quantity like "12 pcs" → numeric, *100
     df_stk_sum['Quantity'] = (
         df_stk_sum['Quantity'].astype(str).str.replace(' pcs', '', regex=False)
     )
     df_stk_sum['Quantity'] = pd.to_numeric(df_stk_sum['Quantity'], errors='coerce').fillna(0) * 100
     df_stk_sum['Quantity'] = df_stk_sum['Quantity'].astype(int)
 
-    # --- Rate list (separate file) ---
     df_rate_list = pd.read_excel(rate_list_file)
     df_rate_list = df_rate_list.iloc[3:].reset_index(drop=True)
     df_rate_list.columns = ['ITEM NO.', 'Rate']
     df_rate_list['ITEM NO.'] = df_rate_list['ITEM NO.'].apply(as_clean_item_no)
     df_rate_list['Rate'] = pd.to_numeric(df_rate_list['Rate'], errors='coerce').fillna(0.0)
 
-    # --- Alternate list ---
     df_alt = pd.read_excel(alternate_list_file)
     expected_cols = ['ITEM NO.', 'Alt1', 'Alt2', 'Alt3']
     if any(c not in df_alt.columns for c in expected_cols):
-        # Coerce first column as 'ITEM NO.' and ensure Alt1..Alt3 exist
         df_alt = df_alt.rename(columns={df_alt.columns[0]: 'ITEM NO.'})
         for c in ['Alt1', 'Alt2', 'Alt3']:
             if c not in df_alt.columns:
@@ -159,13 +145,11 @@ def build_master_df(_stk_m, _rate_m, _alt_m, _cond_m):
     for c in ['Alt1', 'Alt2', 'Alt3']:
         df_alt[c] = df_alt[c].apply(as_clean_item_no)
 
-    # --- Condition sheet ---
     df_condition = pd.read_excel(condition_file)
     df_condition.columns = ['ITEM NO.', 'CONDITION']
     df_condition['ITEM NO.'] = df_condition['ITEM NO.'].apply(as_clean_item_no)
     df_condition['CONDITION'] = pd.to_numeric(df_condition['CONDITION'], errors='coerce')
 
-    # --- Merge → master ---
     master = (
         df_stk_sum
         .merge(df_rate_list, on='ITEM NO.', how='left')
@@ -173,7 +157,6 @@ def build_master_df(_stk_m, _rate_m, _alt_m, _cond_m):
         .merge(df_condition, on='ITEM NO.', how='left')
     )
 
-    # Clean up types and blanks
     master['Rate'] = pd.to_numeric(master['Rate'], errors='coerce')
     master['CONDITION'] = pd.to_numeric(master['CONDITION'], errors='coerce')
     for c in ['Alt1', 'Alt2', 'Alt3']:
@@ -181,28 +164,27 @@ def build_master_df(_stk_m, _rate_m, _alt_m, _cond_m):
             master[c] = ""
         master[c] = master[c].fillna("").astype(str)
 
-    # Save a copy (optional but requested)
     try:
         master.to_excel(MASTER_DF_OUT, index=False)
     except Exception:
-        # If saving fails (e.g., file open), ignore silently for the UI
         pass
 
     return master
 
-# Compute mtimes for cache-busting
+# ---------- Compute mtimes & optional Reload ----------
 stk_m = file_mtime_num(stk_sum_file)
 rate_m = file_mtime_num(rate_list_file)
 alt_m  = file_mtime_num(alternate_list_file)
 cond_m = file_mtime_num(condition_file)
 
-# Optional: a quick "Reload" to clear cache manually
-reload_col, _ = st.columns([1, 6])
-with reload_col:
-    if st.button("🔄 Reload data"):
-        build_master_df.clear()
+topbar = st.container()
+with topbar:
+    cols = st.columns([1, 6])
+    with cols[0]:
+        if st.button("🔄 Reload data"):
+            build_master_df.clear()
 
-# Build master & a small alt view
+# Build master & alt view
 master_df = build_master_df(stk_m, rate_m, alt_m, cond_m)
 alt_df = master_df[['ITEM NO.', 'Alt1', 'Alt2', 'Alt3']].copy()
 
@@ -210,142 +192,174 @@ alt_df = master_df[['ITEM NO.', 'Alt1', 'Alt2', 'Alt3']].copy()
 st.markdown(
     """
     <style>
-    .main { background-color: #ffffff; }
-    .stApp { background-color: #ffffff; }
-    .title { font-size: 2.2em; color: #4e8cff; font-weight: 600; text-align: center; margin-top: 0.4em; }
-    .last-updated { text-align:center; color:#555; margin-top: 0.25rem; }
-    .result { font-size: 1.05rem; }
-    .call-link { display:inline-flex; gap:8px; align-items:center; text-decoration:none; border:1px solid #ddd; border-radius:10px; padding:6px 10px; }
-    footer { visibility: hidden; } /* hide default Streamlit footer */
+      .stApp { background-color: #ffffff; }
+      .offer {
+          margin: 0.4rem auto 0.6rem auto;
+          padding: 8px 14px;
+          border-radius: 999px;
+          font-weight: 800;
+          text-align: center;
+          max-width: 520px;
+          color: white;
+          background: linear-gradient(90deg, #ef4444, #f59e0b, #22c55e, #3b82f6, #a855f7);
+          background-size: 300% 300%;
+          animation: moveGradient 6s ease infinite;
+          box-shadow: 0 6px 16px rgba(0,0,0,0.10);
+          letter-spacing: 0.3px;
+      }
+      @keyframes moveGradient {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+      }
+      .title { font-size: 2.2em; color: #1f3a8a; font-weight: 700; text-align: center; margin: 0.2em 0 0 0; }
+      .last-updated { text-align:center; color:#475569; margin: 0 0 1rem 0; font-size: 0.95rem; }
+      .search-wrap { max-width: 680px; margin: 0 auto 1.0rem auto; }
+      .card { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 16px 18px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+      .status-badge { border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; font-weight: 600; }
+      .status-in { background-color:#d4edda; color:#155724; }
+      .status-out { background-color:#f8d7da; color:#721c24; }
+      .status-low { background-color:#fff3cd; color:#856404; }
+      .result { font-size: 1.05rem; }
+      .call-cta { border: 1px solid #fecaca; background: #fee2e2; color: #991b1b; padding: 10px 14px; border-radius: 12px; display: flex; align-items: center; gap: 12px; justify-content: center; font-weight: 600; }
+      .call-link { display:inline-flex; gap:8px; align-items:center; text-decoration:none; border:1px solid #ddd; border-radius:10px; padding:8px 12px; background:#ffffff; }
+      footer { visibility: hidden; } /* hide default Streamlit footer */
     </style>
     """,
     unsafe_allow_html=True
 )
 
-# ---------- TOP: Search Input FIRST ----------
-item_no = st.text_input('🔍 कृपया आइटम नंबर यहां डालें', value="", placeholder="उदा. 12345").strip().replace('.0', '')
+# ---------- NEW: Offer banner (very top) ----------
+if OFFER_ENABLED and OFFER_TEXT:
+    st.markdown(f'<div class="offer">{OFFER_TEXT}</div>', unsafe_allow_html=True)
 
-# ---------- Title + Last Updated ----------
-last_update_time = safe_file_mtime(stk_sum_file)
+# ---------- TOP: Heading + Last Updated ----------
 st.markdown('<h1 class="title">Jyoti Cards Stock Status</h1>', unsafe_allow_html=True)
+last_update_time = safe_file_mtime(stk_sum_file)
 if last_update_time:
     st.markdown(
         f'<p class="last-updated">Last Updated: {last_update_time.strftime("%d-%m-%Y %H:%M")}</p>',
         unsafe_allow_html=True
     )
 
-# ---------- Optional Call Button ----------
-if os.path.exists(call_icon_url):
-    call_icon_base64 = get_base64_image(call_icon_url)
-    if call_icon_base64:
+# ---------- Search box (Hindi prompt) ----------
+with st.container():
+    st.markdown('<div class="search-wrap">', unsafe_allow_html=True)
+    item_no = st.text_input('🔍 कृपया आइटम नंबर यहाँ डालें', value="", placeholder="उदा. 12345").strip().replace('.0', '')
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# ---------- Main Output Card ----------
+with st.container():
+    if item_no:
+        clean_item = as_clean_item_no(item_no)
+        item_row = master_df[master_df['ITEM NO.'] == clean_item]
+
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.write("Item number entered:", clean_item)
+
+        if not item_row.empty:
+            quantity = pd.to_numeric(item_row['Quantity'].values[0], errors='coerce')
+            condition_value = pd.to_numeric(item_row['CONDITION'].values[0], errors='coerce') if 'CONDITION' in item_row.columns else float('nan')
+            rate = pd.to_numeric(item_row['Rate'].values[0], errors='coerce') if 'Rate' in item_row.columns else float('nan')
+
+            stock_status = get_stock_status(quantity, condition_value)
+
+            if stock_status == 'In Stock':
+                st.markdown('<div class="status-badge status-in">यह आइटम स्टॉक में है (कृपया गोदाम पर बुकिंग के लिए कॉल करें)</div>', unsafe_allow_html=True)
+            elif stock_status == 'Out of Stock':
+                st.markdown('<div class="status-badge status-out">यह आइटम स्टॉक में <b>उपलब्ध नहीं</b> है। नीचे दिए गए विकल्प देखें।</div>', unsafe_allow_html=True)
+            else:
+                st.markdown('<div class="status-badge status-low">यह आइटम का स्टॉक <b>कम</b> है, कृपया शीघ्र गोदाम पर बुक करें।</div>', unsafe_allow_html=True)
+
+            formatted_rate = "N/A" if pd.isna(rate) else f"{rate:.2f}"
+            st.markdown(f'<p class="result"><b>रेट:</b> {formatted_rate}</p>', unsafe_allow_html=True)
+
+            img_path = get_image_path(clean_item)
+            if img_path:
+                st.image(img_path, caption=f'Image of {clean_item}', use_container_width=True)
+            else:
+                st.markdown('<p class="result">इस आइटम नंबर के लिए कोई छवि उपलब्ध नहीं है।</p>', unsafe_allow_html=True)
+
+            if stock_status == 'Out of Stock':
+                st.markdown("<h3>विकल्प</h3>", unsafe_allow_html=True)
+                alt_row = alt_df[alt_df['ITEM NO.'] == clean_item]
+                if not alt_row.empty:
+                    alt_candidates = [
+                        as_clean_item_no(alt_row.iloc[0].get('Alt1', '')),
+                        as_clean_item_no(alt_row.iloc[0].get('Alt2', '')),
+                        as_clean_item_no(alt_row.iloc[0].get('Alt3', '')),
+                    ]
+                    seen = set([clean_item])
+                    alt_candidates = [a for a in alt_candidates if a and a not in seen and not (a in seen or seen.add(a))]
+
+                    if alt_candidates:
+                        for alt_item in alt_candidates:
+                            alt_master_row = master_df[master_df['ITEM NO.'] == alt_item]
+                            if not alt_master_row.empty:
+                                alt_qty = pd.to_numeric(alt_master_row['Quantity'].values[0], errors='coerce')
+                                alt_cond = pd.to_numeric(alt_master_row['CONDITION'].values[0], errors='coerce') if 'CONDITION' in alt_master_row.columns else float('nan')
+                                alt_status = get_stock_status(alt_qty, alt_cond)
+                                alt_rate = pd.to_numeric(alt_master_row['Rate'].values[0], errors='coerce')
+                                formatted_alt_rate = "N/A" if pd.isna(alt_rate) else f"{alt_rate:.2f}"
+
+                                if alt_status == 'In Stock':
+                                    st.markdown(
+                                        f'<p class="result">वैकल्पिक आइटम: <b>{alt_item}</b>, रेट: {formatted_alt_rate}, स्टॉक स्थिति: <b>स्टॉक में उपलब्ध</b></p>',
+                                        unsafe_allow_html=True
+                                    )
+                                    alt_img = get_image_path(alt_item)
+                                    if alt_img:
+                                        st.image(alt_img, caption=f'Image of {alt_item}', use_container_width=True)
+                                    else:
+                                        st.markdown(f'<p class="result">{alt_item} के लिए कोई छवि उपलब्ध नहीं है।</p>', unsafe_allow_html=True)
+                                else:
+                                    st.markdown(
+                                        f'<p class="result">वैकल्पिक आइटम: <b>{alt_item}</b> स्टॉक में उपलब्ध नहीं है।</p>',
+                                        unsafe_allow_html=True
+                                    )
+                            else:
+                                st.markdown(f'<p class="result">वैकल्पिक आइटम <b>{alt_item}</b> उपलब्ध नहीं है।</p>', unsafe_allow_html=True)
+                    else:
+                        st.markdown('<p class="result">इस आइटम के लिए कोई वैकल्पिक आइटम उपलब्ध नहीं हैं।</p>', unsafe_allow_html=True)
+                else:
+                    st.markdown('<p class="result">इस आइटम के लिए कोई वैकल्पिक सूची उपलब्ध नहीं है।</p>', unsafe_allow_html=True)
+        else:
+            st.markdown('<p class="result">मुख्य आइटम उपलब्ध नहीं है।</p>', unsafe_allow_html=True)
+
+        st.markdown('</div>', unsafe_allow_html=True)
+    else:
+        st.markdown('<div class="card"><p class="result">कृपया एक आइटम नंबर दर्ज करें</p></div>', unsafe_allow_html=True)
+
+# ---------- Call section (red highlight + button) ----------
+with st.container():
+    st.markdown('<div style="height:10px;"></div>', unsafe_allow_html=True)
+    call_cols = st.columns([3, 2])
+    with call_cols[0]:
         st.markdown(
-            f'''
-            <a href="tel:{phone_number}" class="call-link">
-                <img src="data:image/png;base64,{call_icon_base64}" width="20" height="20" alt="Call Icon">Call
-            </a>
-            ''',
+            '<div class="call-cta">📞 ऑर्डर बुक करने या अधिक जानकारी के लिए संपर्क करें</div>',
             unsafe_allow_html=True
         )
-
-# ---------- Main Logic ----------
-if item_no:
-    clean_item = as_clean_item_no(item_no)
-    st.write("Item number entered:", clean_item)
-
-    item_row = master_df[master_df['ITEM NO.'] == clean_item]
-    if not item_row.empty:
-        quantity = pd.to_numeric(item_row['Quantity'].values[0], errors='coerce')
-        condition_value = pd.to_numeric(item_row['CONDITION'].values[0], errors='coerce') if 'CONDITION' in item_row.columns else float('nan')
-        rate = pd.to_numeric(item_row['Rate'].values[0], errors='coerce') if 'Rate' in item_row.columns else float('nan')
-
-        stock_status = get_stock_status(quantity, condition_value)
-
-        # Status banners
-        if stock_status == 'In Stock':
-            st.markdown(
-                '<div style="background-color:#d4edda; padding:10px; border-radius:8px;">'
-                '<p style="color:#155724; margin:0;">यह आइटम स्टॉक में है (कृपया गोदाम पर बुकिंग के लिए कॉल करें)</p></div>',
-                unsafe_allow_html=True
-            )
-        elif stock_status == 'Out of Stock':
-            st.markdown(
-                '<div style="background-color:#f8d7da; padding:10px; border-radius:8px;">'
-                '<p style="color:#721c24; margin:0;">यह आइटम स्टॉक में <b>उपलब्ध नहीं</b> है। नीचे दिए गए विकल्प देखें।</p></div>',
-                unsafe_allow_html=True
-            )
-        else:  # Low Stock
-            st.markdown(
-                '<div style="background-color:#fff3cd; padding:10px; border-radius:8px;">'
-                '<p style="color:#856404; margin:0;">यह आइटम का स्टॉक <b>कम</b> है, कृपया शीघ्र गोदाम पर बुक करें।</p></div>',
-                unsafe_allow_html=True
-            )
-
-        # Rate
-        formatted_rate = "N/A" if pd.isna(rate) else f"{rate:.2f}"
-        st.markdown(f'<p class="result"><b>रेट:</b> {formatted_rate}</p>', unsafe_allow_html=True)
-
-        # Main image
-        img_path = get_image_path(clean_item)
-        if img_path:
-            st.image(img_path, caption=f'Image of {clean_item}', use_container_width=True)
+    with call_cols[1]:
+        if os.path.exists(call_icon_url):
+            call_icon_base64 = get_base64_image(call_icon_url)
+            if call_icon_base64:
+                st.markdown(
+                    f'''
+                    <div style="display:flex; align-items:center; height:100%; justify-content:center;">
+                        <a href="tel:{phone_number}" class="call-link">
+                            <img src="data:image/png;base64,{call_icon_base64}" width="20" height="20" alt="Call Icon"> Call
+                        </a>
+                    </div>
+                    ''',
+                    unsafe_allow_html=True
+                )
         else:
-            st.markdown('<p class="result">इस आइटम नंबर के लिए कोई छवि उपलब्ध नहीं है।</p>', unsafe_allow_html=True)
+            st.link_button("Call", f"tel:{phone_number}")
 
-        # ---------- Alternatives: ONLY when Out of Stock ----------
-        if stock_status == 'Out of Stock':
-            st.markdown("<h2>विकल्प</h2>", unsafe_allow_html=True)
-
-            alt_row = alt_df[alt_df['ITEM NO.'] == clean_item]
-            if not alt_row.empty:
-                alt_candidates = [
-                    as_clean_item_no(alt_row.iloc[0].get('Alt1', '')),
-                    as_clean_item_no(alt_row.iloc[0].get('Alt2', '')),
-                    as_clean_item_no(alt_row.iloc[0].get('Alt3', '')),
-                ]
-                # Filter empties and duplicates and remove same as main item
-                seen = set([clean_item])
-                alt_candidates = [a for a in alt_candidates if a and a not in seen and not (a in seen or seen.add(a))]
-
-                if alt_candidates:
-                    for alt_item in alt_candidates:
-                        alt_master_row = master_df[master_df['ITEM NO.'] == alt_item]
-                        if not alt_master_row.empty:
-                            alt_qty = pd.to_numeric(alt_master_row['Quantity'].values[0], errors='coerce')
-                            alt_cond = pd.to_numeric(alt_master_row['CONDITION'].values[0], errors='coerce') if 'CONDITION' in alt_master_row.columns else float('nan')
-                            alt_status = get_stock_status(alt_qty, alt_cond)
-                            alt_rate = pd.to_numeric(alt_master_row['Rate'].values[0], errors='coerce')
-                            formatted_alt_rate = "N/A" if pd.isna(alt_rate) else f"{alt_rate:.2f}"
-
-                            if alt_status == 'In Stock':
-                                st.markdown(
-                                    f'<p class="result">वैकल्पिक आइटम: <b>{alt_item}</b>, रेट: {formatted_alt_rate}, स्टॉक स्थिति: <b>स्टॉक में उपलब्ध</b></p>',
-                                    unsafe_allow_html=True
-                                )
-                                alt_img = get_image_path(alt_item)
-                                if alt_img:
-                                    st.image(alt_img, caption=f'Image of {alt_item}', use_container_width=True)
-                                else:
-                                    st.markdown(f'<p class="result">{alt_item} के लिए कोई छवि उपलब्ध नहीं है।</p>', unsafe_allow_html=True)
-                            else:
-                                st.markdown(
-                                    f'<p class="result">वैकल्पिक आइटम: <b>{alt_item}</b> स्टॉक में उपलब्ध नहीं है।</p>',
-                                    unsafe_allow_html=True
-                                )
-                        else:
-                            st.markdown(f'<p class="result">वैकल्पिक आइटम <b>{alt_item}</b> उपलब्ध नहीं है।</p>', unsafe_allow_html=True)
-                else:
-                    st.markdown('<p class="result">इस आइटम के लिए कोई वैकल्पिक आइटम उपलब्ध नहीं हैं।</p>', unsafe_allow_html=True)
-            else:
-                st.markdown('<p class="result">इस आइटम के लिए कोई वैकल्पिक सूची उपलब्ध नहीं है।</p>', unsafe_allow_html=True)
-    else:
-        st.markdown('<p class="result">मुख्य आइटम उपलब्ध नहीं है।</p>', unsafe_allow_html=True)
-else:
-    st.markdown('<p class="result">कृपया एक आइटम नंबर दर्ज करें</p>', unsafe_allow_html=True)
-
-# ---------- BOTTOM: Logo at the end ----------
+# ---------- Bottom: Logo ----------
 logo_b64 = get_base64_image(logo_path)
 if logo_b64:
-    st.markdown('<hr style="opacity:0.2;">', unsafe_allow_html=True)
-    st.markdown(f'<div style="text-align:center;"><img src="data:image/png;base64,{logo_b64}" style="max-width:240px;"></div>', unsafe_allow_html=True)
+    st.markdown('<hr style="opacity:0.2; margin-top:16px;">', unsafe_allow_html=True)
+    st.markdown(f'<div style="text-align:center;"><img src="data:image/png;base64,{logo_b64}" style="max-width:220px;"></div>', unsafe_allow_html=True)
 
 st.markdown('<p class="result" style="text-align:center; opacity:0.7;">Powered by Jyoti Cards</p>', unsafe_allow_html=True)
