@@ -12,7 +12,7 @@ st.set_page_config(page_title="Jyoti Cards Stock", layout="centered")
 
 # ---------- Constants ----------
 tz = pytz.timezone('Asia/Kolkata')
-stk_sum_file = 'StkSum_new (1).xlsx'                     # Source for ITEM NO. + Qty (col C)
+stk_sum_file = 'StkSum_new.xlsx'                     # Source for ITEM NO. + Qty (col C)
 rate_list_file = 'rate list merged.xlsx'             # (Merged but not shown on UI)
 alternate_list_file = 'STOCK ALTERNATION LIST.xlsx'  # Source for Alt1/Alt2/Alt3
 condition_file = '1112.xlsx'                         # Source for CONDITION
@@ -25,10 +25,9 @@ MASTER_DF_OUT = 'master_df.xlsx'                     # Latest merged sheet
 # ====== SINGLE OFFER BANNER (EDIT HERE) ======
 OFFER_ENABLED = True
 OFFER_TEXT = "New arrivals now available"
-# Example options (keep commented and swap when needed):
+# Example options:
 # OFFER_TEXT = "Special Diwali discount"
 # OFFER_TEXT = "Festive combos — order now"
-# =============================================
 
 # ---------- Helpers ----------
 def safe_file_mtime(path: str) -> datetime.datetime | None:
@@ -51,9 +50,6 @@ def get_base64_image(image_path: str) -> str | None:
         return base64.b64encode(f.read()).decode()
 
 def as_clean_item_no(x) -> str:
-    """
-    Normalize item number to a plain numeric string, stripping any .0, spaces, or text.
-    """
     if pd.isna(x):
         return ""
     s = str(x).strip()
@@ -63,31 +59,26 @@ def as_clean_item_no(x) -> str:
     return m.group(1)
 
 def _digits(s: str) -> str:
-    """Keep only digits and drop leading zeros for robust comparison."""
     d = "".join(ch for ch in str(s) if ch.isdigit())
     return d.lstrip('0') or d
 
 def get_image_path(item_no: str) -> str | None:
-    """
-    1) Try static/{item_no}.{ext}
-    2) Recursively search under static/ and match by digits of item_no.
-    """
     if not item_no:
         return None
-
     want = _digits(item_no)
     if not want:
         return None
 
+    # 1) direct
     for ext in ['jpg', 'jpeg', 'png', 'JPG', 'JPEG', 'PNG']:
         p = os.path.join('static', f'{item_no}.{ext}')
         if os.path.exists(p):
             return p
 
+    # 2) recursive
     exts = {'.jpg', '.jpeg', '.png', '.JPG', '.JPEG', '.PNG'}
     best = None
     best_score = (999, 999999)
-
     for root, _, files in os.walk('static'):
         for fname in files:
             _, ext = os.path.splitext(fname)
@@ -96,7 +87,6 @@ def get_image_path(item_no: str) -> str | None:
             full = os.path.join(root, fname)
             name_no_ext = os.path.splitext(fname)[0]
             name_digits = _digits(name_no_ext)
-
             score = None
             if name_digits == want and name_no_ext == item_no:
                 score = 0
@@ -104,20 +94,18 @@ def get_image_path(item_no: str) -> str | None:
                 score = 1
             elif want and want in _digits(fname):
                 score = 2
-
             if score is not None:
                 cand_score = (score, len(full))
                 if cand_score < best_score:
                     best_score = cand_score
                     best = full
-
     return best
 
 def get_stock_status(quantity, condition_value):
     """
     Out of Stock: quantity is NaN or 0
     In Stock    : condition is NaN OR quantity > condition
-    Low Stock   : otherwise (quantity <= condition and quantity > 0)
+    Low Stock   : 0 < quantity <= condition
     """
     if pd.isna(quantity) or quantity == 0:
         return 'Out of Stock'
@@ -133,9 +121,7 @@ def build_master_df(_stk_m, _rate_m, _alt_m, _cond_m):
     df_stk_sum = df_stk_sum.iloc[7:].reset_index(drop=True)
     df_stk_sum.columns = ['ITEM NO.', 'Quantity']
     df_stk_sum['ITEM NO.'] = df_stk_sum['ITEM NO.'].apply(as_clean_item_no)
-    df_stk_sum['Quantity'] = (
-        df_stk_sum['Quantity'].astype(str).str.replace(' pcs', '', regex=False)
-    )
+    df_stk_sum['Quantity'] = df_stk_sum['Quantity'].astype(str).str.replace(' pcs', '', regex=False)
     df_stk_sum['Quantity'] = pd.to_numeric(df_stk_sum['Quantity'], errors='coerce').fillna(0) * 100
     df_stk_sum['Quantity'] = df_stk_sum['Quantity'].astype(int)
 
@@ -167,13 +153,13 @@ def build_master_df(_stk_m, _rate_m, _alt_m, _cond_m):
     # Merge → master
     master = (
         df_stk_sum
-        .merge(df_rate_list, on='ITEM NO.', how='left')   # rate merged but NOT shown
+        .merge(df_rate_list, on='ITEM NO.', how='left')
         .merge(df_alt, on='ITEM NO.', how='left')
         .merge(df_condition, on='ITEM NO.', how='left')
     )
 
     # Types & blanks
-    master['Rate'] = pd.to_numeric(master['Rate'], errors='coerce')  # unused on UI
+    master['Rate'] = pd.to_numeric(master['Rate'], errors='coerce')
     master['CONDITION'] = pd.to_numeric(master['CONDITION'], errors='coerce')
     for c in ['Alt1', 'Alt2', 'Alt3']:
         if c not in master.columns:
@@ -193,12 +179,11 @@ rate_m = file_mtime_num(rate_list_file)
 alt_m  = file_mtime_num(alternate_list_file)
 cond_m = file_mtime_num(condition_file)
 
-topbar = st.container()
-with topbar:
-    cols = st.columns([1, 6])
-    with cols[0]:
-        if st.button("🔄 Reload data"):
-            build_master_df.clear()
+# Small header row with reload
+hdr_cols = st.columns([1, 6])
+with hdr_cols[0]:
+    if st.button("🔄 Reload data"):
+        build_master_df.clear()
 
 # Build master & alt view
 master_df = build_master_df(stk_m, rate_m, alt_m, cond_m)
@@ -210,7 +195,6 @@ st.markdown(
     <style>
       .stApp { background-color: #ffffff; }
 
-      /* Single colorful offer banner */
       .offer {
           margin: 0.2rem auto 0.5rem auto;
           padding: 10px 16px;
@@ -232,7 +216,6 @@ st.markdown(
           100% { background-position: 0% 50%; }
       }
 
-      /* Sticky header container */
       .sticky-top {
           position: sticky;
           top: 0;
@@ -244,7 +227,6 @@ st.markdown(
       }
       .title { font-size: 2.0em; color: #1f3a8a; font-weight: 700; text-align: center; margin: 0.2em 0 0 0; }
 
-      /* Last updated panel (glowing pill) */
       .last-panel {
           margin: 0.35rem auto 0.6rem auto;
           padding: 8px 14px;
@@ -259,7 +241,6 @@ st.markdown(
 
       .search-wrap { max-width: 680px; margin: 0.2rem auto 0.6rem auto; }
 
-      /* Result card */
       .card {
           background: #ffffff;
           border: 1px solid #e5e7eb;
@@ -267,27 +248,21 @@ st.markdown(
           padding: 18px 18px;
           box-shadow: 0 10px 25px rgba(0,0,0,0.06);
       }
-      .item-caption {
-          font-size: 0.92rem; color: #475569; margin: 0 0 8px 0;
-      }
+      .item-caption { font-size: 0.92rem; color: #475569; margin: 0 0 8px 0; }
       .status-badge {
           border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; font-weight: 700; display: inline-block;
       }
-      .status-in { background-color:#d4edda; color:#155724; }
+      .status-in  { background-color:#d4edda; color:#155724; }
       .status-out { background-color:#f8d7da; color:#721c24; }
       .status-low { background-color:#fff3cd; color:#856404; }
-      .result { font-size: 1.05rem; }
 
-      /* Alternatives grid as product cards */
       .alt-grid {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
           gap: 12px;
           margin-top: 10px;
       }
-      @media (max-width: 720px) {
-          .alt-grid { grid-template-columns: 1fr; }
-      }
+      @media (max-width: 720px) { .alt-grid { grid-template-columns: 1fr; } }
       .alt-card {
           border: 1px solid #e5e7eb;
           border-radius: 14px;
@@ -295,85 +270,38 @@ st.markdown(
           background: #fff;
           box-shadow: 0 6px 16px rgba(0,0,0,0.05);
       }
-      .alt-img-wrap {
-          width: 100%;
-          aspect-ratio: 4 / 3;
-          background: #f8fafc;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          overflow: hidden;
-      }
-      .alt-img-wrap img {
-          width: 100%;
-          height: 100%;
-          object-fit: contain;
-      }
-      .alt-body {
-          padding: 10px 12px;
-      }
-      .badge {
-          display: inline-block;
-          font-size: 0.85rem;
-          font-weight: 700;
-          padding: 4px 8px;
-          border-radius: 999px;
-      }
-      .badge-in { background:#dcfce7; color:#166534; border:1px solid #bbf7d0; }
-      .badge-low { background:#fef9c3; color:#854d0e; border:1px solid #fde68a; }
-      .badge-out { background:#fee2e2; color:#991b1b; border:1px solid #fecaca; }
+      .alt-img-wrap { width: 100%; aspect-ratio: 4 / 3; background: #f8fafc; display:flex; justify-content:center; align-items:center; overflow:hidden; }
+      .alt-img-wrap img { width: 100%; height: 100%; object-fit: contain; }
+      .alt-body { padding: 10px 12px; }
+      .badge      { display:inline-block; font-size: 0.85rem; font-weight: 700; padding: 4px 8px; border-radius:999px; }
+      .badge-in   { background:#dcfce7; color:#166534; border:1px solid #bbf7d0; }
+      .badge-low  { background:#fef9c3; color:#854d0e; border:1px solid #fde68a; }
+      .badge-out  { background:#fee2e2; color:#991b1b; border:1px solid #fecaca; }
+      .badge-unk  { background:#e5e7eb; color:#374151; border:1px solid #d1d5db; }
 
-      /* Sticky footer CTA */
       .sticky-footer {
-          position: fixed;
-          bottom: 0;
-          left: 0;
-          right: 0;
+          position: fixed; bottom: 0; left: 0; right: 0;
           background: rgba(255,255,255,0.96);
-          border-top: 1px solid #e5e7eb;
-          padding: 10px 12px;
-          z-index: 200;
+          border-top: 1px solid #e5e7eb; padding: 10px 12px; z-index: 200;
       }
       .footer-inner {
-          max-width: 820px;
-          margin: 0 auto;
-          display: grid;
-          grid-template-columns: 1fr 1fr 1fr;
-          gap: 10px;
-          align-items: center;
+          max-width: 820px; margin: 0 auto;
+          display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; align-items: center;
       }
-      @media (max-width: 720px) {
-          .footer-inner { grid-template-columns: 1fr 1fr; }
-      }
-      .call-cta {
-          grid-column: 1 / -1;
-          text-align: center;
-          color: #991b1b;
-          background: #fee2e2;
-          border: 1px solid #fecaca;
-          border-radius: 10px;
-          padding: 8px 10px;
-          font-weight: 700;
-      }
-      .link-btn {
-          display:inline-flex; gap:8px; align-items:center; justify-content:center;
-          text-decoration:none; border:1px solid #ddd; border-radius:10px; padding:10px 12px;
-          background:#ffffff; font-weight:700;
-      }
-      .wa-btn { border-color:#86efac; }
-      .wa-btn:hover { background:#ecfeff; }
+      @media (max-width: 720px) { .footer-inner { grid-template-columns: 1fr 1fr; } }
+      .call-cta { grid-column: 1 / -1; text-align: center; color: #991b1b; background: #fee2e2; border:1px solid #fecaca; border-radius:10px; padding:8px 10px; font-weight:700; }
+      .link-btn { display:inline-flex; gap:8px; align-items:center; justify-content:center; text-decoration:none; border:1px solid #ddd; border-radius:10px; padding:10px 12px; background:#ffffff; font-weight:700; }
+      .wa-btn { border-color:#86efac; } .wa-btn:hover { background:#ecfeff; }
       .call-btn:hover { background:#f8fafc; }
 
-      /* Spacer so footer doesn't overlap content */
       .page-bottom-spacer { height: 76px; }
-
-      footer { visibility: hidden; } /* hide default Streamlit footer */
+      footer { visibility: hidden; }
     </style>
     """,
     unsafe_allow_html=True
 )
 
-# ---------- SINGLE offer banner (top, not sticky) ----------
+# ---------- SINGLE offer banner ----------
 if OFFER_ENABLED and OFFER_TEXT:
     st.markdown(f'<div class="offer">{OFFER_TEXT}</div>', unsafe_allow_html=True)
 
@@ -381,7 +309,6 @@ if OFFER_ENABLED and OFFER_TEXT:
 st.markdown('<div class="sticky-top">', unsafe_allow_html=True)
 st.markdown('<h1 class="title">Jyoti Cards Stock Status</h1>', unsafe_allow_html=True)
 
-# Last updated inside a glowing pill (bold)
 last_update_time = safe_file_mtime(stk_sum_file)
 if last_update_time:
     st.markdown(
@@ -391,29 +318,15 @@ if last_update_time:
 
 st.markdown('<div class="search-wrap">', unsafe_allow_html=True)
 item_no = st.text_input('🔍 कृपया आइटम नंबर यहाँ डालें', value="", placeholder="उदा. 12345").strip().replace('.0', '')
-# Try to autofocus the input (best-effort)
-st.markdown("""
-<script>
-const focusInput = () => {
-  const el = window.parent.document.querySelector('input[type="text"]');
-  if (el) { el.focus(); return true; }
-  return false;
-}
-let tries = 0;
-const iv = setInterval(() => { if (focusInput() || tries++ > 10) clearInterval(iv); }, 300);
-</script>
-""", unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)  # end sticky
 
-# ---------- Main Output Card ----------
+# ---------- Main Output Card (no extra containers/empty blocks) ----------
 if item_no:
     clean_item = as_clean_item_no(item_no)
     item_row = master_df[master_df['ITEM NO.'] == clean_item]
 
-    # Card starts
     st.markdown('<div class="card">', unsafe_allow_html=True)
-    # Compact caption (no extra Streamlit box)
     st.markdown(f'<div class="item-caption">आइटम नंबर: <b>{clean_item}</b></div>', unsafe_allow_html=True)
 
     if not item_row.empty:
@@ -421,7 +334,7 @@ if item_no:
         condition_value = pd.to_numeric(item_row['CONDITION'].values[0], errors='coerce') if 'CONDITION' in item_row.columns else float('nan')
 
         stock_status = get_stock_status(quantity, condition_value)
-        # Status + icon
+
         if stock_status == 'In Stock':
             st.markdown('<div class="status-badge status-in">✅ यह आइटम स्टॉक में है (कृपया गोदाम पर बुकिंग के लिए कॉल करें)</div>', unsafe_allow_html=True)
         elif stock_status == 'Out of Stock':
@@ -429,16 +342,14 @@ if item_no:
         else:
             st.markdown('<div class="status-badge status-low">⚠️ यह आइटम का स्टॉक <b>कम</b> है, कृपया शीघ्र गोदाम पर बुक करें।</div>', unsafe_allow_html=True)
 
-        # Main image (auto-resize)
         img_path = get_image_path(clean_item)
         if img_path:
             st.image(img_path, caption=f'Image of {clean_item}', use_container_width=True)
         else:
             st.markdown('<p class="result">इस आइटम नंबर के लिए कोई छवि उपलब्ध नहीं है।</p>', unsafe_allow_html=True)
 
-        # === Alternatives: show ONLY when Quantity == 0 (strict) ===
-        qty_is_zero = (pd.notna(quantity) and int(quantity) == 0)
-        if qty_is_zero:
+        # Show alternatives ONLY when quantity == 0
+        if pd.notna(quantity) and int(quantity) == 0:
             alt_row = alt_df[alt_df['ITEM NO.'] == clean_item]
             if not alt_row.empty:
                 alts = [
@@ -446,7 +357,7 @@ if item_no:
                     as_clean_item_no(alt_row.iloc[0].get('Alt2', '')),
                     as_clean_item_no(alt_row.iloc[0].get('Alt3', '')),
                 ]
-                alts = [a for a in alts if a]  # filter empties
+                alts = [a for a in alts if a]  # remove empties
                 if alts:
                     st.markdown("<h3>विकल्प</h3>", unsafe_allow_html=True)
                     st.markdown('<div class="alt-grid">', unsafe_allow_html=True)
@@ -454,24 +365,29 @@ if item_no:
                     for alt_item in alts:
                         if shown >= 3:
                             break
+
                         alt_master_row = master_df[master_df['ITEM NO.'] == alt_item]
-                        if alt_master_row.empty:
-                            continue
-                        alt_qty = pd.to_numeric(alt_master_row['Quantity'].values[0], errors='coerce')
-                        alt_cond = pd.to_numeric(alt_master_row['CONDITION'].values[0], errors='coerce') if 'CONDITION' in alt_master_row.columns else float('nan')
-                        alt_status = get_stock_status(alt_qty, alt_cond)
-
-                        # Badge class
-                        if alt_status == 'In Stock':
-                            badge_cls, badge_text = 'badge badge-in', 'In Stock'
-                        elif alt_status == 'Low Stock':
-                            badge_cls, badge_text = 'badge badge-low', 'Low Stock'
-                        else:
-                            badge_cls, badge_text = 'badge badge-out', 'Out of Stock'
-
                         alt_img = get_image_path(alt_item)
 
-                        # Card HTML
+                        # If we have neither master row nor image, skip to avoid a blank card
+                        if alt_master_row.empty and not alt_img:
+                            continue
+
+                        # Compute status when possible
+                        if not alt_master_row.empty:
+                            alt_qty  = pd.to_numeric(alt_master_row['Quantity'].values[0], errors='coerce')
+                            alt_cond = pd.to_numeric(alt_master_row['CONDITION'].values[0], errors='coerce') if 'CONDITION' in alt_master_row.columns else float('nan')
+                            alt_status = get_stock_status(alt_qty, alt_cond)
+                            if alt_status == 'In Stock':
+                                badge_cls, badge_text = 'badge badge-in', 'In Stock'
+                            elif alt_status == 'Low Stock':
+                                badge_cls, badge_text = 'badge badge-low', 'Low Stock'
+                            else:
+                                badge_cls, badge_text = 'badge badge-out', 'Out of Stock'
+                        else:
+                            badge_cls, badge_text = 'badge badge-unk', 'Unknown'
+
+                        # Card
                         st.markdown('<div class="alt-card">', unsafe_allow_html=True)
                         st.markdown('<div class="alt-img-wrap">', unsafe_allow_html=True)
                         if alt_img:
@@ -481,10 +397,13 @@ if item_no:
                         st.markdown('</div>', unsafe_allow_html=True)
 
                         st.markdown('<div class="alt-body">', unsafe_allow_html=True)
-                        st.markdown(f'<div style="display:flex; align-items:center; justify-content:space-between;">'
-                                    f'<div style="font-weight:800;">{alt_item}</div>'
-                                    f'<div class="{badge_cls}">{badge_text}</div>'
-                                    f'</div>', unsafe_allow_html=True)
+                        st.markdown(
+                            f'<div style="display:flex; align-items:center; justify-content:space-between;">'
+                            f'<div style="font-weight:800;">{alt_item}</div>'
+                            f'<div class="{badge_cls}">{badge_text}</div>'
+                            f'</div>',
+                            unsafe_allow_html=True
+                        )
                         st.markdown('</div>', unsafe_allow_html=True)
                         st.markdown('</div>', unsafe_allow_html=True)
                         shown += 1
@@ -492,59 +411,56 @@ if item_no:
             else:
                 st.markdown('<p class="result">इस आइटम के लिए कोई वैकल्पिक सूची उपलब्ध नहीं है।</p>', unsafe_allow_html=True)
     else:
-        # No item typed → render nothing (no white box)
-        pass
+        st.markdown('<p class="result">मुख्य आइटम उपलब्ध नहीं है।</p>', unsafe_allow_html=True)
 
     st.markdown('</div>', unsafe_allow_html=True)  # end .card
 
 # ---------- Sticky Footer (Call & WhatsApp) ----------
-with st.container():
-    st.markdown('<div class="sticky-footer">', unsafe_allow_html=True)
-    st.markdown('<div class="footer-inner">', unsafe_allow_html=True)
+st.markdown('<div class="sticky-footer">', unsafe_allow_html=True)
+st.markdown('<div class="footer-inner">', unsafe_allow_html=True)
 
-    # CTA text
-    st.markdown('<div class="call-cta">📞 ऑर्डर बुक करने या अधिक जानकारी के लिए संपर्क करें</div>', unsafe_allow_html=True)
+# CTA text
+st.markdown('<div class="call-cta">📞 ऑर्डर बुक करने या अधिक जानकारी के लिए संपर्क करें</div>', unsafe_allow_html=True)
 
-    # Call button
-    if os.path.exists(call_icon_url):
-        call_icon_base64 = get_base64_image(call_icon_url)
-        if call_icon_base64:
-            st.markdown(
-                f'''
-                <a href="tel:{phone_number}" class="link-btn call-btn">
-                    <img src="data:image/png;base64,{call_icon_base64}" width="18" height="18" alt="Call"> Call
-                </a>
-                ''',
-                unsafe_allow_html=True
-            )
-    else:
-        st.markdown(f'<a href="tel:{phone_number}" class="link-btn call-btn">📞 Call</a>', unsafe_allow_html=True)
-
-    # WhatsApp button (prefilled Hindi message for booking)
-    if 'item_no' in locals() and item_no.strip():
-        clean_item_for_wa = as_clean_item_no(item_no)
-        wa_text = f"नमस्ते, मुझे आइटम {clean_item_for_wa} बुक करना है, कृपया ___ मात्रा का ऑर्डर लगा दीजिए।"
-    else:
-        wa_text = "नमस्ते, मुझे स्टॉक की जानकारी चाहिए।"
-    wa_url = f"https://wa.me/{whatsapp_phone}?text={quote(wa_text)}"
-
-    # Use actual WhatsApp icon if available
-    wa_icon_path = os.path.join('static', 'whatsapp.png')
-    if os.path.exists(wa_icon_path):
-        wa_icon_base64 = get_base64_image(wa_icon_path)
+# Call button
+if os.path.exists(call_icon_url):
+    call_icon_base64 = get_base64_image(call_icon_url)
+    if call_icon_base64:
         st.markdown(
             f'''
-            <a href="{wa_url}" target="_blank" class="link-btn wa-btn">
-                <img src="data:image/png;base64,{wa_icon_base64}" width="18" height="18" alt="WhatsApp"> Book Order
+            <a href="tel:{phone_number}" class="link-btn call-btn">
+                <img src="data:image/png;base64,{call_icon_base64}" width="18" height="18" alt="Call"> Call
             </a>
             ''',
             unsafe_allow_html=True
         )
-    else:
-        st.markdown(f'<a href="{wa_url}" target="_blank" class="link-btn wa-btn">💬 Book Order</a>', unsafe_allow_html=True)
+else:
+    st.markdown(f'<a href="tel:{phone_number}" class="link-btn call-btn">📞 Call</a>', unsafe_allow_html=True)
 
-    st.markdown('</div>', unsafe_allow_html=True)   # end footer-inner
-    st.markdown('</div>', unsafe_allow_html=True)   # end sticky-footer
+# WhatsApp button (prefilled Hindi message for booking)
+if item_no.strip():
+    clean_item_for_wa = as_clean_item_no(item_no)
+    wa_text = f"नमस्ते, मुझे आइटम {clean_item_for_wa} बुक करना है, कृपया ___ मात्रा का ऑर्डर लगा दीजिए।"
+else:
+    wa_text = "नमस्ते, मुझे स्टॉक की जानकारी चाहिए।"
+wa_url = f"https://wa.me/{whatsapp_phone}?text={quote(wa_text)}"
+
+wa_icon_path = os.path.join('static', 'whatsapp.png')
+if os.path.exists(wa_icon_path):
+    wa_icon_base64 = get_base64_image(wa_icon_path)
+    st.markdown(
+        f'''
+        <a href="{wa_url}" target="_blank" class="link-btn wa-btn">
+            <img src="data:image/png;base64,{wa_icon_base64}" width="18" height="18" alt="WhatsApp"> Book Order
+        </a>
+        ''',
+        unsafe_allow_html=True
+    )
+else:
+    st.markdown(f'<a href="{wa_url}" target="_blank" class="link-btn wa-btn">💬 Book Order</a>', unsafe_allow_html=True)
+
+st.markdown('</div>', unsafe_allow_html=True)   # end footer-inner
+st.markdown('</div>', unsafe_allow_html=True)   # end sticky-footer
 
 # Spacer so footer doesn't overlap content
 st.markdown('<div class="page-bottom-spacer"></div>', unsafe_allow_html=True)
