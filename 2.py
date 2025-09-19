@@ -12,7 +12,7 @@ st.set_page_config(page_title="Jyoti Cards Stock", layout="centered")
 
 # ---------- Constants ----------
 tz = pytz.timezone('Asia/Kolkata')
-stk_sum_file = 'StkSum_new.xlsx'                     # Source for ITEM NO. + Qty
+stk_sum_file = 'StkSum_new.xlsx'                     # Source for ITEM NO. + Qty (col C)
 rate_list_file = 'rate list merged.xlsx'             # (Merged but not shown on UI)
 alternate_list_file = 'STOCK ALTERNATION LIST.xlsx'  # Source for Alt1/Alt2/Alt3
 condition_file = '1112.xlsx'                         # Source for CONDITION
@@ -114,6 +114,11 @@ def get_image_path(item_no: str) -> str | None:
     return best
 
 def get_stock_status(quantity, condition_value):
+    """
+    Out of Stock: quantity is NaN or 0
+    In Stock    : condition is NaN OR quantity > condition
+    Low Stock   : otherwise (quantity <= condition and quantity > 0)
+    """
     if pd.isna(quantity) or quantity == 0:
         return 'Out of Stock'
     if pd.isna(condition_value):
@@ -123,7 +128,7 @@ def get_stock_status(quantity, condition_value):
 # ---------- Data pipeline (auto-rebuild when any file changes) ----------
 @st.cache_data(show_spinner=False)
 def build_master_df(_stk_m, _rate_m, _alt_m, _cond_m):
-    # StkSum (ITEM NO., Quantity)
+    # StkSum (ITEM NO., Quantity from col C)
     df_stk_sum = pd.read_excel(stk_sum_file, usecols=[0, 2])
     df_stk_sum = df_stk_sum.iloc[7:].reset_index(drop=True)
     df_stk_sum.columns = ['ITEM NO.', 'Quantity']
@@ -239,7 +244,7 @@ st.markdown(
       }
       .title { font-size: 2.0em; color: #1f3a8a; font-weight: 700; text-align: center; margin: 0.2em 0 0 0; }
 
-      /* NEW: Last updated panel (glowing pill) */
+      /* Last updated panel (glowing pill) */
       .last-panel {
           margin: 0.35rem auto 0.6rem auto;
           padding: 8px 14px;
@@ -261,6 +266,9 @@ st.markdown(
           border-radius: 16px;
           padding: 18px 18px;
           box-shadow: 0 10px 25px rgba(0,0,0,0.06);
+      }
+      .item-caption {
+          font-size: 0.92rem; color: #475569; margin: 0 0 8px 0;
       }
       .status-badge {
           border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; font-weight: 700; display: inline-block;
@@ -373,7 +381,7 @@ if OFFER_ENABLED and OFFER_TEXT:
 st.markdown('<div class="sticky-top">', unsafe_allow_html=True)
 st.markdown('<h1 class="title">Jyoti Cards Stock Status</h1>', unsafe_allow_html=True)
 
-# NEW: Last updated inside a glowing pill (bold)
+# Last updated inside a glowing pill (bold)
 last_update_time = safe_file_mtime(stk_sum_file)
 if last_update_time:
     st.markdown(
@@ -404,8 +412,10 @@ with st.container():
         clean_item = as_clean_item_no(item_no)
         item_row = master_df[master_df['ITEM NO.'] == clean_item]
 
+        # Card starts
         st.markdown('<div class="card">', unsafe_allow_html=True)
-        #st.write("Item number entered:", clean_item)
+        # Removed st.write(...) to avoid extra white box
+        st.markdown(f'<div class="item-caption">आइटम नंबर: <b>{clean_item}</b></div>', unsafe_allow_html=True)
 
         if not item_row.empty:
             quantity = pd.to_numeric(item_row['Quantity'].values[0], errors='coerce')
@@ -427,8 +437,9 @@ with st.container():
             else:
                 st.markdown('<p class="result">इस आइटम नंबर के लिए कोई छवि उपलब्ध नहीं है।</p>', unsafe_allow_html=True)
 
-            # Alternatives (only for Out of Stock) — show up to 3 as product cards
-            if stock_status == 'Out of Stock':
+            # === Alternatives: show ONLY when Quantity == 0 (strict) ===
+            qty_is_zero = (pd.notna(quantity) and int(quantity) == 0)
+            if qty_is_zero:
                 alt_row = alt_df[alt_df['ITEM NO.'] == clean_item]
                 if not alt_row.empty:
                     alts = [
@@ -442,7 +453,7 @@ with st.container():
                         st.markdown('<div class="alt-grid">', unsafe_allow_html=True)
                         shown = 0
                         for alt_item in alts:
-                            if shown >= 3:  # up to 3
+                            if shown >= 3:
                                 break
                             alt_master_row = master_df[master_df['ITEM NO.'] == alt_item]
                             if alt_master_row.empty:
@@ -480,12 +491,11 @@ with st.container():
                         st.markdown('</div>', unsafe_allow_html=True)
                 else:
                     st.markdown('<p class="result">इस आइटम के लिए कोई वैकल्पिक सूची उपलब्ध नहीं है।</p>', unsafe_allow_html=True)
+
         else:
             st.markdown('<p class="result">मुख्य आइटम उपलब्ध नहीं है।</p>', unsafe_allow_html=True)
 
-        st.markdown('</div>', unsafe_allow_html=True)
-    # else:  # REMOVED the extra card/box when no item is entered
-    #     pass
+        st.markdown('</div>', unsafe_allow_html=True)  # end .card
 
 # ---------- Sticky Footer (Call & WhatsApp) ----------
 with st.container():
@@ -518,7 +528,7 @@ with st.container():
         wa_text = "नमस्ते, मुझे स्टॉक की जानकारी चाहिए।"
     wa_url = f"https://wa.me/{whatsapp_phone}?text={quote(wa_text)}"
 
-    # Use actual WhatsApp icon
+    # Use actual WhatsApp icon if available
     wa_icon_path = os.path.join('static', 'whatsapp.png')
     if os.path.exists(wa_icon_path):
         wa_icon_base64 = get_base64_image(wa_icon_path)
@@ -532,6 +542,7 @@ with st.container():
         )
     else:
         st.markdown(f'<a href="{wa_url}" target="_blank" class="link-btn wa-btn">💬 Book Order</a>', unsafe_allow_html=True)
+
     st.markdown('</div>', unsafe_allow_html=True)   # end footer-inner
     st.markdown('</div>', unsafe_allow_html=True)   # end sticky-footer
 
