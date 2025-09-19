@@ -12,7 +12,7 @@ st.set_page_config(page_title="Jyoti Cards Stock", layout="centered")
 
 # ---------- Constants ----------
 tz = pytz.timezone('Asia/Kolkata')
-stk_sum_file = 'StkSum_new.xlsx'                     # Source for ITEM NO. + Qty
+stk_sum_file = 'StkSum_new (1).xlsx'                     # Source for ITEM NO. + Qty
 rate_list_file = 'rate list merged.xlsx'             # (Merged but not shown on UI)
 alternate_list_file = 'STOCK ALTERNATION LIST.xlsx'  # Source for Alt1/Alt2/Alt3
 condition_file = '1112.xlsx'                         # Source for CONDITION
