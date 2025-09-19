@@ -517,9 +517,21 @@ with st.container():
     else:
         wa_text = "नमस्ते, मुझे स्टॉक की जानकारी चाहिए।"
     wa_url = f"https://wa.me/{whatsapp_phone}?text={quote(wa_text)}"
-    # Label changed: "Book Order" + WhatsApp icon
-    st.markdown(f'<a href="{wa_url}" target="_blank" class="link-btn wa-btn">🟢 Book Order</a>', unsafe_allow_html=True)
 
+    # Use actual WhatsApp icon
+    wa_icon_path = os.path.join('static', 'whatsapp.png')
+    if os.path.exists(wa_icon_path):
+        wa_icon_base64 = get_base64_image(wa_icon_path)
+        st.markdown(
+            f'''
+            <a href="{wa_url}" target="_blank" class="link-btn wa-btn">
+                <img src="data:image/png;base64,{wa_icon_base64}" width="18" height="18" alt="WhatsApp"> Book Order
+            </a>
+            ''',
+            unsafe_allow_html=True
+        )
+    else:
+        st.markdown(f'<a href="{wa_url}" target="_blank" class="link-btn wa-btn">💬 Book Order</a>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)   # end footer-inner
     st.markdown('</div>', unsafe_allow_html=True)   # end sticky-footer
 
