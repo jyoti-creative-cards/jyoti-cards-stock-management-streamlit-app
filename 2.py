@@ -407,95 +407,95 @@ st.markdown('</div>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)  # end sticky
 
 # ---------- Main Output Card ----------
-with st.container():
-    if item_no:
-        clean_item = as_clean_item_no(item_no)
-        item_row = master_df[master_df['ITEM NO.'] == clean_item]
+if item_no:
+    clean_item = as_clean_item_no(item_no)
+    item_row = master_df[master_df['ITEM NO.'] == clean_item]
 
-        # Card starts
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-        # Removed st.write(...) to avoid extra white box
-        st.markdown(f'<div class="item-caption">आइटम नंबर: <b>{clean_item}</b></div>', unsafe_allow_html=True)
+    # Card starts
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    # Compact caption (no extra Streamlit box)
+    st.markdown(f'<div class="item-caption">आइटम नंबर: <b>{clean_item}</b></div>', unsafe_allow_html=True)
 
-        if not item_row.empty:
-            quantity = pd.to_numeric(item_row['Quantity'].values[0], errors='coerce')
-            condition_value = pd.to_numeric(item_row['CONDITION'].values[0], errors='coerce') if 'CONDITION' in item_row.columns else float('nan')
+    if not item_row.empty:
+        quantity = pd.to_numeric(item_row['Quantity'].values[0], errors='coerce')
+        condition_value = pd.to_numeric(item_row['CONDITION'].values[0], errors='coerce') if 'CONDITION' in item_row.columns else float('nan')
 
-            stock_status = get_stock_status(quantity, condition_value)
-            # Status + icon
-            if stock_status == 'In Stock':
-                st.markdown('<div class="status-badge status-in">✅ यह आइटम स्टॉक में है (कृपया गोदाम पर बुकिंग के लिए कॉल करें)</div>', unsafe_allow_html=True)
-            elif stock_status == 'Out of Stock':
-                st.markdown('<div class="status-badge status-out">❌ यह आइटम स्टॉक में <b>उपलब्ध नहीं</b> है। नीचे दिए गए विकल्प देखें।</div>', unsafe_allow_html=True)
-            else:
-                st.markdown('<div class="status-badge status-low">⚠️ यह आइटम का स्टॉक <b>कम</b> है, कृपया शीघ्र गोदाम पर बुक करें।</div>', unsafe_allow_html=True)
-
-            # Main image (auto-resize)
-            img_path = get_image_path(clean_item)
-            if img_path:
-                st.image(img_path, caption=f'Image of {clean_item}', use_container_width=True)
-            else:
-                st.markdown('<p class="result">इस आइटम नंबर के लिए कोई छवि उपलब्ध नहीं है।</p>', unsafe_allow_html=True)
-
-            # === Alternatives: show ONLY when Quantity == 0 (strict) ===
-            qty_is_zero = (pd.notna(quantity) and int(quantity) == 0)
-            if qty_is_zero:
-                alt_row = alt_df[alt_df['ITEM NO.'] == clean_item]
-                if not alt_row.empty:
-                    alts = [
-                        as_clean_item_no(alt_row.iloc[0].get('Alt1', '')),
-                        as_clean_item_no(alt_row.iloc[0].get('Alt2', '')),
-                        as_clean_item_no(alt_row.iloc[0].get('Alt3', '')),
-                    ]
-                    alts = [a for a in alts if a]  # filter empties
-                    if alts:
-                        st.markdown("<h3>विकल्प</h3>", unsafe_allow_html=True)
-                        st.markdown('<div class="alt-grid">', unsafe_allow_html=True)
-                        shown = 0
-                        for alt_item in alts:
-                            if shown >= 3:
-                                break
-                            alt_master_row = master_df[master_df['ITEM NO.'] == alt_item]
-                            if alt_master_row.empty:
-                                continue
-                            alt_qty = pd.to_numeric(alt_master_row['Quantity'].values[0], errors='coerce')
-                            alt_cond = pd.to_numeric(alt_master_row['CONDITION'].values[0], errors='coerce') if 'CONDITION' in alt_master_row.columns else float('nan')
-                            alt_status = get_stock_status(alt_qty, alt_cond)
-                            # Badge class
-                            if alt_status == 'In Stock':
-                                badge_cls, badge_text = 'badge badge-in', 'In Stock'
-                            elif alt_status == 'Low Stock':
-                                badge_cls, badge_text = 'badge badge-low', 'Low Stock'
-                            else:
-                                badge_cls, badge_text = 'badge badge-out', 'Out of Stock'
-
-                            alt_img = get_image_path(alt_item)
-
-                            # Card HTML
-                            st.markdown('<div class="alt-card">', unsafe_allow_html=True)
-                            st.markdown('<div class="alt-img-wrap">', unsafe_allow_html=True)
-                            if alt_img:
-                                st.image(alt_img, use_container_width=True)
-                            else:
-                                st.markdown('<div style="opacity:0.6;">No Image</div>', unsafe_allow_html=True)
-                            st.markdown('</div>', unsafe_allow_html=True)
-
-                            st.markdown('<div class="alt-body">', unsafe_allow_html=True)
-                            st.markdown(f'<div style="display:flex; align-items:center; justify-content:space-between;">'
-                                        f'<div style="font-weight:800;">{alt_item}</div>'
-                                        f'<div class="{badge_cls}">{badge_text}</div>'
-                                        f'</div>', unsafe_allow_html=True)
-                            st.markdown('</div>', unsafe_allow_html=True)
-                            st.markdown('</div>', unsafe_allow_html=True)
-                            shown += 1
-                        st.markdown('</div>', unsafe_allow_html=True)
-                else:
-                    st.markdown('<p class="result">इस आइटम के लिए कोई वैकल्पिक सूची उपलब्ध नहीं है।</p>', unsafe_allow_html=True)
-
+        stock_status = get_stock_status(quantity, condition_value)
+        # Status + icon
+        if stock_status == 'In Stock':
+            st.markdown('<div class="status-badge status-in">✅ यह आइटम स्टॉक में है (कृपया गोदाम पर बुकिंग के लिए कॉल करें)</div>', unsafe_allow_html=True)
+        elif stock_status == 'Out of Stock':
+            st.markdown('<div class="status-badge status-out">❌ यह आइटम स्टॉक में <b>उपलब्ध नहीं</b> है। नीचे दिए गए विकल्प देखें।</div>', unsafe_allow_html=True)
         else:
-            st.markdown('<p class="result">मुख्य आइटम उपलब्ध नहीं है।</p>', unsafe_allow_html=True)
+            st.markdown('<div class="status-badge status-low">⚠️ यह आइटम का स्टॉक <b>कम</b> है, कृपया शीघ्र गोदाम पर बुक करें।</div>', unsafe_allow_html=True)
 
-        st.markdown('</div>', unsafe_allow_html=True)  # end .card
+        # Main image (auto-resize)
+        img_path = get_image_path(clean_item)
+        if img_path:
+            st.image(img_path, caption=f'Image of {clean_item}', use_container_width=True)
+        else:
+            st.markdown('<p class="result">इस आइटम नंबर के लिए कोई छवि उपलब्ध नहीं है।</p>', unsafe_allow_html=True)
+
+        # === Alternatives: show ONLY when Quantity == 0 (strict) ===
+        qty_is_zero = (pd.notna(quantity) and int(quantity) == 0)
+        if qty_is_zero:
+            alt_row = alt_df[alt_df['ITEM NO.'] == clean_item]
+            if not alt_row.empty:
+                alts = [
+                    as_clean_item_no(alt_row.iloc[0].get('Alt1', '')),
+                    as_clean_item_no(alt_row.iloc[0].get('Alt2', '')),
+                    as_clean_item_no(alt_row.iloc[0].get('Alt3', '')),
+                ]
+                alts = [a for a in alts if a]  # filter empties
+                if alts:
+                    st.markdown("<h3>विकल्प</h3>", unsafe_allow_html=True)
+                    st.markdown('<div class="alt-grid">', unsafe_allow_html=True)
+                    shown = 0
+                    for alt_item in alts:
+                        if shown >= 3:
+                            break
+                        alt_master_row = master_df[master_df['ITEM NO.'] == alt_item]
+                        if alt_master_row.empty:
+                            continue
+                        alt_qty = pd.to_numeric(alt_master_row['Quantity'].values[0], errors='coerce')
+                        alt_cond = pd.to_numeric(alt_master_row['CONDITION'].values[0], errors='coerce') if 'CONDITION' in alt_master_row.columns else float('nan')
+                        alt_status = get_stock_status(alt_qty, alt_cond)
+
+                        # Badge class
+                        if alt_status == 'In Stock':
+                            badge_cls, badge_text = 'badge badge-in', 'In Stock'
+                        elif alt_status == 'Low Stock':
+                            badge_cls, badge_text = 'badge badge-low', 'Low Stock'
+                        else:
+                            badge_cls, badge_text = 'badge badge-out', 'Out of Stock'
+
+                        alt_img = get_image_path(alt_item)
+
+                        # Card HTML
+                        st.markdown('<div class="alt-card">', unsafe_allow_html=True)
+                        st.markdown('<div class="alt-img-wrap">', unsafe_allow_html=True)
+                        if alt_img:
+                            st.image(alt_img, use_container_width=True)
+                        else:
+                            st.markdown('<div style="opacity:0.6;">No Image</div>', unsafe_allow_html=True)
+                        st.markdown('</div>', unsafe_allow_html=True)
+
+                        st.markdown('<div class="alt-body">', unsafe_allow_html=True)
+                        st.markdown(f'<div style="display:flex; align-items:center; justify-content:space-between;">'
+                                    f'<div style="font-weight:800;">{alt_item}</div>'
+                                    f'<div class="{badge_cls}">{badge_text}</div>'
+                                    f'</div>', unsafe_allow_html=True)
+                        st.markdown('</div>', unsafe_allow_html=True)
+                        st.markdown('</div>', unsafe_allow_html=True)
+                        shown += 1
+                    st.markdown('</div>', unsafe_allow_html=True)
+            else:
+                st.markdown('<p class="result">इस आइटम के लिए कोई वैकल्पिक सूची उपलब्ध नहीं है।</p>', unsafe_allow_html=True)
+    else:
+        # No item typed → render nothing (no white box)
+        pass
+
+    st.markdown('</div>', unsafe_allow_html=True)  # end .card
 
 # ---------- Sticky Footer (Call & WhatsApp) ----------
 with st.container():
