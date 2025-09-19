@@ -12,7 +12,7 @@ st.set_page_config(page_title="Jyoti Cards Stock", layout="centered")
 
 # ---------- Constants ----------
 tz = pytz.timezone('Asia/Kolkata')
-stk_sum_file = 'StkSum_new (1).xlsx'                     # Source for ITEM NO. + Qty
+stk_sum_file = 'StkSum_new.xlsx'                     # Source for ITEM NO. + Qty
 rate_list_file = 'rate list merged.xlsx'             # (Merged but not shown on UI)
 alternate_list_file = 'STOCK ALTERNATION LIST.xlsx'  # Source for Alt1/Alt2/Alt3
 condition_file = '1112.xlsx'                         # Source for CONDITION
@@ -238,7 +238,20 @@ st.markdown(
           padding-bottom: 8px;
       }
       .title { font-size: 2.0em; color: #1f3a8a; font-weight: 700; text-align: center; margin: 0.2em 0 0 0; }
-      .last-updated { text-align:center; color:#475569; margin: 0 0 0.6rem 0; font-size: 0.92rem; }
+
+      /* NEW: Last updated panel (glowing pill) */
+      .last-panel {
+          margin: 0.35rem auto 0.6rem auto;
+          padding: 8px 14px;
+          border-radius: 999px;
+          max-width: 380px;
+          text-align: center;
+          font-weight: 800;
+          color: #0f172a;
+          background: linear-gradient(90deg, #e0f2fe, #ecfeff, #e0f2fe);
+          box-shadow: 0 0 0 2px #bae6fd inset, 0 6px 16px rgba(59,130,246,0.15);
+      }
+
       .search-wrap { max-width: 680px; margin: 0.2rem auto 0.6rem auto; }
 
       /* Result card */
@@ -359,10 +372,12 @@ if OFFER_ENABLED and OFFER_TEXT:
 # ---------- Sticky: Heading + Last Updated + Search ----------
 st.markdown('<div class="sticky-top">', unsafe_allow_html=True)
 st.markdown('<h1 class="title">Jyoti Cards Stock Status</h1>', unsafe_allow_html=True)
+
+# NEW: Last updated inside a glowing pill (bold)
 last_update_time = safe_file_mtime(stk_sum_file)
 if last_update_time:
     st.markdown(
-        f'<p class="last-updated">Last Updated: {last_update_time.strftime("%d-%m-%Y %H:%M")}</p>',
+        f'<div class="last-panel">Last Updated: <b>{last_update_time.strftime("%d-%m-%Y %H:%M")}</b></div>',
         unsafe_allow_html=True
     )
 
@@ -469,8 +484,8 @@ with st.container():
             st.markdown('<p class="result">मुख्य आइटम उपलब्ध नहीं है।</p>', unsafe_allow_html=True)
 
         st.markdown('</div>', unsafe_allow_html=True)
-    else:
-        st.markdown('<div class="card"><p class="result">कृपया एक आइटम नंबर दर्ज करें</p></div>', unsafe_allow_html=True)
+    # else:  # REMOVED the extra card/box when no item is entered
+    #     pass
 
 # ---------- Sticky Footer (Call & WhatsApp) ----------
 with st.container():
@@ -495,14 +510,15 @@ with st.container():
     else:
         st.markdown(f'<a href="tel:{phone_number}" class="link-btn call-btn">📞 Call</a>', unsafe_allow_html=True)
 
-    # WhatsApp button (prefilled Hindi text with item number if available)
+    # WhatsApp button (prefilled Hindi message for booking)
     if 'item_no' in locals() and item_no.strip():
         clean_item_for_wa = as_clean_item_no(item_no)
-        wa_text = f"नमस्ते, मुझे आइटम {clean_item_for_wa} की अधिक जानकारी चाहिए।"
+        wa_text = f"नमस्ते, मुझे आइटम {clean_item_for_wa} बुक करना है, कृपया ___ मात्रा का ऑर्डर लगा दीजिए।"
     else:
         wa_text = "नमस्ते, मुझे स्टॉक की जानकारी चाहिए।"
     wa_url = f"https://wa.me/{whatsapp_phone}?text={quote(wa_text)}"
-    st.markdown(f'<a href="{wa_url}" target="_blank" class="link-btn wa-btn">💬 WhatsApp</a>', unsafe_allow_html=True)
+    # Label changed: "Book Order" + WhatsApp icon
+    st.markdown(f'<a href="{wa_url}" target="_blank" class="link-btn wa-btn">🟢 Book Order</a>', unsafe_allow_html=True)
 
     st.markdown('</div>', unsafe_allow_html=True)   # end footer-inner
     st.markdown('</div>', unsafe_allow_html=True)   # end sticky-footer
