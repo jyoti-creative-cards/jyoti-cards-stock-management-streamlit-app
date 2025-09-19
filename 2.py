@@ -405,7 +405,7 @@ with st.container():
         item_row = master_df[master_df['ITEM NO.'] == clean_item]
 
         st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.write("Item number entered:", clean_item)
+        #st.write("Item number entered:", clean_item)
 
         if not item_row.empty:
             quantity = pd.to_numeric(item_row['Quantity'].values[0], errors='coerce')
