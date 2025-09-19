@@ -12,7 +12,7 @@ st.set_page_config(page_title="Jyoti Cards Stock", layout="centered")
 
 # ---------- Constants ----------
 tz = pytz.timezone('Asia/Kolkata')
-stk_sum_file = 'StkSum_new (1).xlsx'                     # Source for ITEM NO. + Qty (col C)
+stk_sum_file = 'StkSum_new.xlsx'                     # Source for ITEM NO. + Qty (col C)
 rate_list_file = 'rate list merged.xlsx'             # (Merged but not shown on UI)
 alternate_list_file = 'STOCK ALTERNATION LIST.xlsx'  # Source for Alt1/Alt2/Alt3
 condition_file = '1112.xlsx'                         # Source for CONDITION
@@ -25,7 +25,6 @@ MASTER_DF_OUT = 'master_df.xlsx'                     # Latest merged sheet
 # ====== SINGLE OFFER BANNER (EDIT HERE) ======
 OFFER_ENABLED = True
 OFFER_TEXT = "New arrivals now available"
-# Example options:
 # OFFER_TEXT = "Special Diwali discount"
 # OFFER_TEXT = "Festive combos — order now"
 
@@ -68,17 +67,14 @@ def get_image_path(item_no: str) -> str | None:
     want = _digits(item_no)
     if not want:
         return None
-
     # 1) direct
     for ext in ['jpg', 'jpeg', 'png', 'JPG', 'JPEG', 'PNG']:
         p = os.path.join('static', f'{item_no}.{ext}')
         if os.path.exists(p):
             return p
-
     # 2) recursive
     exts = {'.jpg', '.jpeg', '.png', '.JPG', '.JPEG', '.PNG'}
-    best = None
-    best_score = (999, 999999)
+    best, best_score = None, (999, 999999)
     for root, _, files in os.walk('static'):
         for fname in files:
             _, ext = os.path.splitext(fname)
@@ -88,17 +84,13 @@ def get_image_path(item_no: str) -> str | None:
             name_no_ext = os.path.splitext(fname)[0]
             name_digits = _digits(name_no_ext)
             score = None
-            if name_digits == want and name_no_ext == item_no:
-                score = 0
-            elif name_digits == want:
-                score = 1
-            elif want and want in _digits(fname):
-                score = 2
+            if name_digits == want and name_no_ext == item_no: score = 0
+            elif name_digits == want: score = 1
+            elif want and want in _digits(fname): score = 2
             if score is not None:
-                cand_score = (score, len(full))
-                if cand_score < best_score:
-                    best_score = cand_score
-                    best = full
+                cand = (score, len(full))
+                if cand < best_score:
+                    best_score, best = cand, full
     return best
 
 def get_stock_status(quantity, condition_value):
@@ -256,6 +248,7 @@ st.markdown(
       .status-out { background-color:#f8d7da; color:#721c24; }
       .status-low { background-color:#fff3cd; color:#856404; }
 
+      /* Alt cards: remove grey wrapper; images edge-to-edge */
       .alt-grid {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
@@ -270,8 +263,7 @@ st.markdown(
           background: #fff;
           box-shadow: 0 6px 16px rgba(0,0,0,0.05);
       }
-      .alt-img-wrap { width: 100%; aspect-ratio: 4 / 3; background: #f8fafc; display:flex; justify-content:center; align-items:center; overflow:hidden; }
-      .alt-img-wrap img { width: 100%; height: 100%; object-fit: contain; }
+      .alt-card img { width: 100%; height: auto; display:block; }
       .alt-body { padding: 10px 12px; }
       .badge      { display:inline-block; font-size: 0.85rem; font-weight: 700; padding: 4px 8px; border-radius:999px; }
       .badge-in   { background:#dcfce7; color:#166534; border:1px solid #bbf7d0; }
@@ -321,7 +313,7 @@ item_no = st.text_input('🔍 कृपया आइटम नंबर यह�
 st.markdown('</div>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)  # end sticky
 
-# ---------- Main Output Card (no extra containers/empty blocks) ----------
+# ---------- Main Output Card ----------
 if item_no:
     clean_item = as_clean_item_no(item_no)
     item_row = master_df[master_df['ITEM NO.'] == clean_item]
@@ -357,7 +349,7 @@ if item_no:
                     as_clean_item_no(alt_row.iloc[0].get('Alt2', '')),
                     as_clean_item_no(alt_row.iloc[0].get('Alt3', '')),
                 ]
-                alts = [a for a in alts if a]  # remove empties
+                alts = [a for a in alts if a]
                 if alts:
                     st.markdown("<h3>विकल्प</h3>", unsafe_allow_html=True)
                     st.markdown('<div class="alt-grid">', unsafe_allow_html=True)
@@ -365,15 +357,14 @@ if item_no:
                     for alt_item in alts:
                         if shown >= 3:
                             break
-
                         alt_master_row = master_df[master_df['ITEM NO.'] == alt_item]
                         alt_img = get_image_path(alt_item)
 
-                        # If we have neither master row nor image, skip to avoid a blank card
+                        # Skip truly empty alt (no row and no image)
                         if alt_master_row.empty and not alt_img:
                             continue
 
-                        # Compute status when possible
+                        # Determine badge
                         if not alt_master_row.empty:
                             alt_qty  = pd.to_numeric(alt_master_row['Quantity'].values[0], errors='coerce')
                             alt_cond = pd.to_numeric(alt_master_row['CONDITION'].values[0], errors='coerce') if 'CONDITION' in alt_master_row.columns else float('nan')
@@ -387,14 +378,12 @@ if item_no:
                         else:
                             badge_cls, badge_text = 'badge badge-unk', 'Unknown'
 
-                        # Card
+                        # Card (no grey wrapper; image directly)
                         st.markdown('<div class="alt-card">', unsafe_allow_html=True)
-                        st.markdown('<div class="alt-img-wrap">', unsafe_allow_html=True)
                         if alt_img:
                             st.image(alt_img, use_container_width=True)
                         else:
-                            st.markdown('<div style="opacity:0.6;">No Image</div>', unsafe_allow_html=True)
-                        st.markdown('</div>', unsafe_allow_html=True)
+                            st.markdown('<div style="opacity:0.6; padding:16px 12px;">No Image</div>', unsafe_allow_html=True)
 
                         st.markdown('<div class="alt-body">', unsafe_allow_html=True)
                         st.markdown(
@@ -419,7 +408,6 @@ if item_no:
 st.markdown('<div class="sticky-footer">', unsafe_allow_html=True)
 st.markdown('<div class="footer-inner">', unsafe_allow_html=True)
 
-# CTA text
 st.markdown('<div class="call-cta">📞 ऑर्डर बुक करने या अधिक जानकारी के लिए संपर्क करें</div>', unsafe_allow_html=True)
 
 # Call button
