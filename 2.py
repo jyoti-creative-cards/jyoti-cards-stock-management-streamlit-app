@@ -240,7 +240,18 @@ st.markdown(
           box-shadow: 0 0 0 2px #bae6fd inset, 0 6px 16px rgba(59,130,246,0.15);
       }
 
-      .search-wrap { max-width: 680px; margin: 0.2rem auto 0.6rem auto; }
+      .search-wrap {
+          max-width: 680px;
+          margin: 0.2rem auto 0 auto; /* Adjusted to remove bottom margin */
+      }
+
+      .stTextInput > div > div {
+          margin-bottom: 0 !important; /* Remove default bottom margin of the input container */
+      }
+
+      .stTextInput > div {
+          padding: 0 !important; /* Remove default padding */
+      }
 
       /* Result card – reduced top padding to avoid “blank box” feeling */
       .card {
