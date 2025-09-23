@@ -320,7 +320,11 @@ if last_update_time:
     )
 
 st.markdown('<div class="search-wrap">', unsafe_allow_html=True)
-item_no = st.text_input('🔍 कृपया आइटम नंबर यहाँ डालें', value="", placeholder="उदा. 12345").strip().replace('.0', '')
+item_no = st.text_input(
+    "",
+    value="",
+    placeholder="🔍 कृपया आइटम नंबर यहाँ डालें"
+).strip().replace('.0', '')
 st.markdown('</div>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)  # end sticky
 
