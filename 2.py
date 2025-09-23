@@ -321,10 +321,12 @@ if last_update_time:
 
 st.markdown('<div class="search-wrap">', unsafe_allow_html=True)
 item_no = st.text_input(
-    "",
+    "कृपया आइटम नंबर यहाँ डालें",      # logical label (for a11y)
     value="",
-    placeholder="🔍 कृपया आइटम नंबर यहाँ डालें"
-).strip().replace('.0', '')
+    placeholder="🔍 कृपया आइटम नंबर यहाँ डालें",
+    label_visibility="collapsed",        # << hides the label container completely
+    key="item_no"
+).strip().replace(".0", "")
 st.markdown('</div>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)  # end sticky
 
