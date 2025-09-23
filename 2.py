@@ -253,3 +253,7 @@ st.markdown(
           border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; font-weight: 700; display: inline-block;
       }
       .status-in  { background-color:#d4edda; color:#155724
+          </style>
+    """,
+    unsafe_allow_html=True
+)
