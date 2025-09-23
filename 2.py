@@ -445,7 +445,7 @@ else:
 # WhatsApp button (prefilled Hindi message for booking)
 if item_no.strip():
     clean_item_for_wa = as_clean_item_no(item_no)
-    wa_text = f"नमस्ते, मुझे आइटम {clean_item_for_wa} बुक करना है, कृपया ___ मात्रा का ऑर्डर लगा दीजिए।"
+    wa_text = f"नमस्ते,\nआइटम {clean_item_for_wa} बुक करना है। \nQuantity:"
 else:
     wa_text = "नमस्ते, मुझे स्टॉक की जानकारी चाहिए।"
 wa_url = f"https://wa.me/{whatsapp_phone}?text={quote(wa_text)}"
