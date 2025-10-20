@@ -1,0 +1,105 @@
+════════════════════════════════════════════════════════════════
+    📊 HOW TO UPDATE STOCK - SIMPLE 3-STEP PROCESS
+════════════════════════════════════════════════════════════════════
+
+⭐ THE ONLY FILE YOU NEED TO EDIT: data/website stock.xlsx
+
+════════════════════════════════════════════════════════════════════
+
+STEP 1: OPEN THE FILE
+────────────────────────────────────────────────────────────────────
+📂 Navigate to:
+   jyoti-cards-stock-management-streamlit-app/data/
+
+📄 Open:
+   website stock.xlsx
+
+════════════════════════════════════════════════════════════════════
+
+STEP 2: UPDATE QUANTITIES
+────────────────────────────────────────────────────────────────────
+✏️ In the Excel file:
+   - Find the item number
+   - Update the quantity in Column C
+   - Save the file (Cmd+S or Ctrl+S)
+
+Example:
+┌─────────────┬─────────┬──────────┬──────┬─────────┐
+│ Item No.    │ Sales   │ Quantity │ Rate │ Value   │
+├─────────────┼─────────┼──────────┼──────┼─────────┤
+│ 1001        │ 3       │ 106.5    │ 1.8  │ 191.7   │ ← Update this
+│ 1002        │ 2       │ 68.5     │ 1.95 │ 133.58  │
+└─────────────┴─────────┴──────────┴──────┴─────────┘
+
+════════════════════════════════════════════════════════════════════
+
+STEP 3: RELOAD IN APP
+────────────────────────────────────────────────────────────────────
+🔄 In the running application:
+   - Click the 🔄 reload button (top right corner)
+   
+   OR
+   
+   - Restart the app:
+     1. Stop the app (Ctrl+C)
+     2. Run: streamlit run app.py
+
+✅ Stock is now updated!
+
+════════════════════════════════════════════════════════════════════
+
+THAT'S IT! 🎉
+
+Just these 3 steps:
+1. Open data/website stock.xlsx
+2. Update quantities & save
+3. Click 🔄 in app
+
+════════════════════════════════════════════════════════════════════
+
+💡 PRO TIPS:
+────────────────────────────────────────────────────────────────────
+✓ Update stock daily for accuracy
+✓ Save the Excel file before reloading
+✓ The app auto-detects file changes
+✓ Keep file name exactly as: "website stock.xlsx"
+✓ Don't change the folder structure
+
+════════════════════════════════════════════════════════════════════
+
+⚠️ IMPORTANT:
+────────────────────────────────────────────────────────────────────
+DO NOT rename or move these files:
+  ❌ Don't rename data/website stock.xlsx
+  ❌ Don't move files out of data/ folder
+  ❌ Don't change column structure in Excel
+
+ONLY EDIT:
+  ✅ Quantity values in website stock.xlsx
+  ✅ That's it!
+
+════════════════════════════════════════════════════════════════════
+
+📱 WHAT CUSTOMERS SEE:
+────────────────────────────────────────────────────────────────────
+Customers will NOT see actual quantities!
+
+They only see:
+  ✅ "In Stock" (if quantity > 0)
+  ❌ "Out of Stock" (if quantity = 0)
+
+Your stock numbers remain PRIVATE! 🔒
+
+════════════════════════════════════════════════════════════════════
+
+🌐 CURRENT ACCESS:
+────────────────────────────────────────────────────────────────────
+Desktop: http://localhost:8501
+Mobile:  http://192.168.1.8:8501
+
+════════════════════════════════════════════════════════════════════
+
+Questions? Check README.md for detailed information!
+
+════════════════════════════════════════════════════════════════════
+

@@ -1,0 +1,147 @@
+════════════════════════════════════════════════════════════════════
+    JYOTI CARDS - QUICK START GUIDE
+════════════════════════════════════════════════════════════════════
+
+📁 PROJECT FILES:
+────────────────────────────────────────────────────────────────────
+✅ app.py                      → Main application file
+✅ data/                        → All data files are here
+   ├── website stock.xlsx       → ⭐ UPDATE THIS FOR STOCK CHANGES
+   ├── ALTER LIST 2026.xlsx     → Alternative items
+   └── PORTAL MINIMUM STOCK.xlsx → Minimum stock levels
+✅ images/                      → Product photos (526 images)
+✅ docs/                        → Documentation
+✅ README.md                    → Detailed instructions
+
+════════════════════════════════════════════════════════════════════
+🚀 HOW TO RUN THE APP:
+════════════════════════════════════════════════════════════════════
+
+1. Open Terminal
+
+2. Navigate to project folder:
+   cd /Users/sourabhagrawal/Downloads/anshul/jyoti-cards-stock-management-streamlit-app
+
+3. Activate virtual environment:
+   source venv/bin/activate
+
+4. Run the app:
+   streamlit run app.py
+
+5. Open browser:
+   - Desktop: http://localhost:8501
+   - Mobile: Use Network URL shown in terminal
+
+════════════════════════════════════════════════════════════════════
+📊 HOW TO UPDATE STOCK:
+════════════════════════════════════════════════════════════════════
+
+1. Open: data/website stock.xlsx
+2. Update the quantities
+3. Save the file
+4. In app, click 🔄 reload button
+   OR restart the app
+
+That's it! Stock is updated! ✅
+
+════════════════════════════════════════════════════════════════════
+🖼️ HOW TO ADD NEW PRODUCT IMAGES:
+════════════════════════════════════════════════════════════════════
+
+1. Copy image to: images/
+2. Name it: 1001.jpeg (use item number)
+3. Supported: .jpg, .jpeg, .png
+4. Reload app
+
+════════════════════════════════════════════════════════════════════
+⚙️ SETTINGS TO CHANGE:
+════════════════════════════════════════════════════════════════════
+
+📞 Phone Numbers (app.py, lines 25-26):
+   phone_number = "07312506986"
+   whatsapp_phone = "919516789702"
+
+🎉 Offer Banner (app.py, line 33):
+   OFFER_TEXT = "🎉 New arrivals now available"
+
+❌ Disable Banner (app.py, line 32):
+   OFFER_ENABLED = False
+
+════════════════════════════════════════════════════════════════════
+🔧 TROUBLESHOOTING:
+════════════════════════════════════════════════════════════════════
+
+❌ App won't start:
+   → Make sure you're in the right folder
+   → Run: source venv/bin/activate
+   → Then: streamlit run app.py
+
+❌ Stock not updating:
+   → Click 🔄 in the app
+   → Or restart the app
+   → Make sure Excel file is saved
+
+❌ Image not showing:
+   → Check filename = item number
+   → Must be in images/ folder
+   → Supported: .jpg, .jpeg, .png
+
+════════════════════════════════════════════════════════════════════
+✨ KEY FEATURES:
+════════════════════════════════════════════════════════════════════
+
+✅ Clean interface - no clutter
+✅ Stock status - In/Out of stock only
+✅ WhatsApp integration - Pre-filled messages
+✅ Call button - Direct phone link
+✅ Alternative items - When out of stock
+✅ Mobile optimized - Works on phones
+✅ B2B privacy - Quantities hidden from customers
+
+════════════════════════════════════════════════════════════════════
+📱 MOBILE ACCESS:
+════════════════════════════════════════════════════════════════════
+
+1. Start app on computer
+2. Note the "Network URL" in terminal
+   Example: http://192.168.1.8:8501
+3. Open that URL on mobile browser
+4. Bookmark it for quick access!
+
+════════════════════════════════════════════════════════════════════
+💡 IMPORTANT TIPS:
+════════════════════════════════════════════════════════════════════
+
+⭐ The MAIN file to update: data/website stock.xlsx
+⭐ Don't rename folders (data, images, docs)
+⭐ Don't rename the Excel files
+⭐ Always save Excel before reloading
+⭐ Stock quantities are hidden from customers
+⭐ Keep images folder updated with product photos
+
+════════════════════════════════════════════════════════════════════
+📞 WHAT CUSTOMERS SEE:
+════════════════════════════════════════════════════════════════════
+
+1. Search for item number
+2. See: "In Stock" or "Out of Stock"
+3. View product image
+4. See alternatives (if out of stock)
+5. Click WhatsApp or Call button
+6. Contact you for details!
+
+Simple and professional! ✨
+
+════════════════════════════════════════════════════════════════════
+✅ YOU'RE ALL SET!
+════════════════════════════════════════════════════════════════════
+
+Just update data/website stock.xlsx when stock changes!
+Everything else is automated! 🚀
+
+For detailed information, see: README.md
+
+════════════════════════════════════════════════════════════════════
+Version: 2.0 | Status: Production Ready | October 2025
+════════════════════════════════════════════════════════════════════
+
