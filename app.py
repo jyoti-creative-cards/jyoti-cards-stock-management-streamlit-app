@@ -780,9 +780,9 @@ st.markdown(f'''
 # WhatsApp Button with icon - context-aware message
 if item_no and item_no.strip():
     clean_item_for_wa = as_clean_item_no(item_no)
-    wa_text = f"नमस्ते, मुझे {clean_item_for_wa} की अधिक जानकारी चाहिए।"
+    wa_text = f"namastey mujhe {clean_item_for_wa} book karna hai , Kripya itne quantity book kare __"
 else:
-    wa_text = "नमस्ते, मुझे स्टॉक की जानकारी चाहिए।"
+    wa_text = "namastey mujhe stock ki jankari chahiye."
 
 wa_url = f"https://wa.me/{whatsapp_phone}?text={quote(wa_text)}"
 st.markdown(f'''
