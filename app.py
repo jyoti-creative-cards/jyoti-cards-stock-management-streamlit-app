@@ -107,7 +107,7 @@ def get_image_path(item_no: str) -> str | None:
 
 def get_stock_status(quantity, condition_value):
     """Return stock status with percentage"""
-    if pd.isna(quantity) or quantity == 0:
+    if pd.isna(quantity) or quantity <= 0:
         return 'Out of Stock', 0
     if pd.isna(condition_value):
         return 'In Stock', 100
