@@ -241,3 +241,4 @@ Just update `data/website stock.xlsx` and reload the app whenever stock changes.
 **Version:** 2.0  
 **Last Updated:** October 2025  
 **Status:** ✅ Production Ready
+
