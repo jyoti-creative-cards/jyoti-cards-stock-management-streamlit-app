@@ -701,8 +701,8 @@ if item_no:
         else:
             st.markdown('<p style="text-align: center; color: #94a3b8; padding: 40px 0;">📷 इस आइटम के लिए कोई छवि उपलब्ध नहीं है</p>', unsafe_allow_html=True)
         
-        # Alternatives (only when out of stock)
-        if pd.notna(quantity) and int(quantity) == 0:
+        # Alternatives (only when out of stock or low stock)
+        if stock_status in ['Out of Stock', 'Low Stock']:
             alt_row = alt_df[alt_df['ITEM NO.'] == clean_item]
             if not alt_row.empty:
                 alts = [as_clean_item_no(alt_row.iloc[0].get(f'Alt{i}', '')) for i in [1, 2, 3]]
