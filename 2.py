@@ -107,7 +107,7 @@ def get_image_path(item_no: str) -> str | None:
 
 def get_stock_status(quantity, condition_value):
     """Return stock status with percentage"""
-    if pd.isna(quantity) or quantity == 0:
+    if pd.isna(quantity) or quantity <= 0:
         return 'Out of Stock', 0
     if pd.isna(condition_value):
         return 'In Stock', 100
@@ -119,7 +119,7 @@ def get_stock_status(quantity, condition_value):
 
 
 # ---------- Data Pipeline ----------
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, ttl=0)
 def build_master_df(_stk_m, _alt_m, _cond_m):
     """Build master dataframe with caching for performance"""
     # Website Stock
@@ -687,8 +687,8 @@ if item_no:
             st.markdown('<div class="status-badge status-in">✅ यह आइटम स्टॉक में उपलब्ध है</div>', unsafe_allow_html=True)
         elif stock_status == 'Out of Stock':
             st.markdown('<div class="status-badge status-out">❌ यह आइटम स्टॉक में उपलब्ध नहीं है</div>', unsafe_allow_html=True)
-        else:
-            st.markdown('<div class="status-badge status-low">✅ यह आइटम स्टॉक में उपलब्ध है</div>', unsafe_allow_html=True)
+        else:  # Low Stock
+            st.markdown('<div class="status-badge status-low">⚠️ यह आइटम कम स्टॉक में है</div>', unsafe_allow_html=True)
         
         st.markdown('</div>', unsafe_allow_html=True)
         
@@ -780,7 +780,7 @@ st.markdown(f'''
 # WhatsApp Button with icon - context-aware message
 if item_no and item_no.strip():
     clean_item_for_wa = as_clean_item_no(item_no)
-    wa_text = f"नमस्ते, मुझे {clean_item_for_wa} की अधिक जानकारी चाहिए।"
+    wa_text = f"नमस्ते, मुझे {clean_item_for_wa} बुक करना है, कृपया इतनी क्वांटिटी बुक करें __"
 else:
     wa_text = "नमस्ते, मुझे स्टॉक की जानकारी चाहिए।"
 
