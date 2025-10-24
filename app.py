@@ -687,8 +687,8 @@ if item_no:
             st.markdown('<div class="status-badge status-in">✅ यह आइटम स्टॉक में उपलब्ध है</div>', unsafe_allow_html=True)
         elif stock_status == 'Out of Stock':
             st.markdown('<div class="status-badge status-out">❌ यह आइटम स्टॉक में उपलब्ध नहीं है</div>', unsafe_allow_html=True)
-        else:
-            st.markdown('<div class="status-badge status-low">✅ यह आइटम स्टॉक में उपलब्ध है</div>', unsafe_allow_html=True)
+        else:  # Low Stock
+            st.markdown('<div class="status-badge status-low">⚠️ यह आइटम कम स्टॉक में है</div>', unsafe_allow_html=True)
         
         st.markdown('</div>', unsafe_allow_html=True)
         
