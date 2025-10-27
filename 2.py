@@ -119,7 +119,7 @@ def get_stock_status(quantity, condition_value):
 
 
 # ---------- Data Pipeline ----------
-@st.cache_data(show_spinner=False, ttl=0)
+@st.cache_data(show_spinner=False)
 def build_master_df(_stk_m, _alt_m, _cond_m):
     """Build master dataframe with caching for performance"""
     # Website Stock
