@@ -188,6 +188,45 @@ st.markdown("""
     
     .stApp { 
         background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        position: relative;
+        overflow-x: hidden;
+        z-index: 10;
+    }
+    
+    /* Particle Effects */
+    .particles {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 1;
+    }
+    
+    .particle {
+        position: absolute;
+        background: rgba(102, 126, 234, 0.05);
+        border-radius: 50%;
+        animation: float 6s ease-in-out infinite;
+    }
+    
+    .particle:nth-child(1) { width: 4px; height: 4px; left: 10%; animation-delay: 0s; }
+    .particle:nth-child(2) { width: 6px; height: 6px; left: 20%; animation-delay: 1s; }
+    .particle:nth-child(3) { width: 3px; height: 3px; left: 30%; animation-delay: 2s; }
+    .particle:nth-child(4) { width: 5px; height: 5px; left: 40%; animation-delay: 3s; }
+    .particle:nth-child(5) { width: 4px; height: 4px; left: 50%; animation-delay: 4s; }
+    .particle:nth-child(6) { width: 7px; height: 7px; left: 60%; animation-delay: 5s; }
+    .particle:nth-child(7) { width: 3px; height: 3px; left: 70%; animation-delay: 0.5s; }
+    .particle:nth-child(8) { width: 5px; height: 5px; left: 80%; animation-delay: 1.5s; }
+    .particle:nth-child(9) { width: 4px; height: 4px; left: 90%; animation-delay: 2.5s; }
+    .particle:nth-child(10) { width: 6px; height: 6px; left: 15%; animation-delay: 3.5s; }
+    
+    @keyframes float {
+        0%, 100% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+        10% { opacity: 1; }
+        90% { opacity: 1; }
+        50% { transform: translateY(-100px) rotate(180deg); }
     }
     
     /* Hide Streamlit branding */
@@ -219,7 +258,7 @@ st.markdown("""
       .sticky-top {
           position: sticky;
           top: 0;
-          z-index: 100;
+          z-index: 1000;
           backdrop-filter: blur(10px);
           background: transparent;
           border-bottom: none;
@@ -287,16 +326,20 @@ st.markdown("""
         box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
     }
     
-    /* Result Card */
+    /* Result Card - Glassmorphism */
       .card {
-        background: transparent;
+        background: rgba(255, 255, 255, 0.25);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.18);
         border-radius: 20px;
         padding: 24px;
         margin: 1.5rem auto;
         max-width: 720px;
-        box-shadow: none;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
         animation: fadeIn 0.4s ease-out;
-        border: none;
+        position: relative;
+        z-index: 100;
     }
     
     @keyframes fadeIn {
@@ -390,6 +433,12 @@ st.markdown("""
     .status-low {
         background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
         color: white;
+        animation: pulse 2s ease-in-out infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); }
+        50% { transform: scale(1.05); box-shadow: 0 8px 24px rgba(245, 158, 11, 0.4); }
     }
     
     /* Progress Bar */
@@ -440,10 +489,13 @@ st.markdown("""
     }
     
       .alt-card {
-        background: white;
+        background: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
         border-radius: 16px;
           overflow: hidden;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
         transition: all 0.3s ease;
         cursor: pointer;
     }
@@ -537,27 +589,40 @@ st.markdown("""
         font-size: 1rem;
         transition: all 0.2s ease;
         min-width: 140px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        border: none;
+        position: relative;
     }
     
     .call-btn {
         background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
         color: white;
+        box-shadow: 8px 8px 16px rgba(59, 130, 246, 0.3), -8px -8px 16px rgba(255, 255, 255, 0.1);
     }
     
     .call-btn:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+        box-shadow: 12px 12px 24px rgba(59, 130, 246, 0.4), -12px -12px 24px rgba(255, 255, 255, 0.2);
+    }
+    
+    .call-btn:active {
+        transform: translateY(0px);
+        box-shadow: 4px 4px 8px rgba(59, 130, 246, 0.3), -4px -4px 8px rgba(255, 255, 255, 0.1);
     }
     
     .wa-btn {
         background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
         color: white;
+        box-shadow: 8px 8px 16px rgba(37, 211, 102, 0.3), -8px -8px 16px rgba(255, 255, 255, 0.1);
     }
     
     .wa-btn:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(37, 211, 102, 0.4);
+        box-shadow: 12px 12px 24px rgba(37, 211, 102, 0.4), -12px -12px 24px rgba(255, 255, 255, 0.2);
+    }
+    
+    .wa-btn:active {
+        transform: translateY(0px);
+        box-shadow: 4px 4px 8px rgba(37, 211, 102, 0.3), -4px -4px 8px rgba(255, 255, 255, 0.1);
     }
     
     .page-bottom-spacer {
@@ -617,6 +682,22 @@ st.markdown("""
     }
     </style>
 """, unsafe_allow_html=True)
+
+# ---------- Particle Effects ----------
+st.markdown('''
+<div class="particles">
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+</div>
+''', unsafe_allow_html=True)
 
 # ---------- Success Message ----------
 if st.session_state.show_success:
@@ -715,14 +796,15 @@ if item_no:
                         alt_master_row = master_df[master_df['ITEM NO.'] == alt_item]
                         alt_img = get_image_path(alt_item)
 
-                        if alt_master_row.empty and not alt_img:
-                            continue
-
+                        # Skip if alternate item is out of stock
                         if not alt_master_row.empty:
                             alt_qty = pd.to_numeric(alt_master_row['Quantity'].values[0], errors='coerce')
                             alt_cond = pd.to_numeric(alt_master_row['CONDITION'].values[0], errors='coerce') if 'CONDITION' in alt_master_row.columns else float('nan')
                             alt_status, _ = get_stock_status(alt_qty, alt_cond)
+                            if alt_status == 'Out of Stock':
+                                continue  # Don't show out of stock alternates
                             
+                            # Set badge based on status
                             if alt_status == 'In Stock':
                                 badge_html = '<span class="badge badge-in">In Stock</span>'
                             elif alt_status == 'Low Stock':
@@ -731,6 +813,9 @@ if item_no:
                                 badge_html = '<span class="badge badge-out">Out of Stock</span>'
                         else:
                             badge_html = '<span class="badge badge-unk">Unknown</span>'
+
+                        if alt_master_row.empty and not alt_img:
+                            continue
 
                         st.markdown('<div class="alt-card">', unsafe_allow_html=True)
                         if alt_img:
