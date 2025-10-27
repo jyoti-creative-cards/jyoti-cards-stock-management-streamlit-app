@@ -188,45 +188,6 @@ st.markdown("""
     
     .stApp { 
         background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-        position: relative;
-        overflow-x: hidden;
-        z-index: 10;
-    }
-    
-    /* Particle Effects */
-    .particles {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        pointer-events: none;
-        z-index: 1;
-    }
-    
-    .particle {
-        position: absolute;
-        background: rgba(102, 126, 234, 0.05);
-        border-radius: 50%;
-        animation: float 6s ease-in-out infinite;
-    }
-    
-    .particle:nth-child(1) { width: 4px; height: 4px; left: 10%; animation-delay: 0s; }
-    .particle:nth-child(2) { width: 6px; height: 6px; left: 20%; animation-delay: 1s; }
-    .particle:nth-child(3) { width: 3px; height: 3px; left: 30%; animation-delay: 2s; }
-    .particle:nth-child(4) { width: 5px; height: 5px; left: 40%; animation-delay: 3s; }
-    .particle:nth-child(5) { width: 4px; height: 4px; left: 50%; animation-delay: 4s; }
-    .particle:nth-child(6) { width: 7px; height: 7px; left: 60%; animation-delay: 5s; }
-    .particle:nth-child(7) { width: 3px; height: 3px; left: 70%; animation-delay: 0.5s; }
-    .particle:nth-child(8) { width: 5px; height: 5px; left: 80%; animation-delay: 1.5s; }
-    .particle:nth-child(9) { width: 4px; height: 4px; left: 90%; animation-delay: 2.5s; }
-    .particle:nth-child(10) { width: 6px; height: 6px; left: 15%; animation-delay: 3.5s; }
-    
-    @keyframes float {
-        0%, 100% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
-        10% { opacity: 1; }
-        90% { opacity: 1; }
-        50% { transform: translateY(-100px) rotate(180deg); }
     }
     
     /* Hide Streamlit branding */
@@ -258,7 +219,7 @@ st.markdown("""
       .sticky-top {
           position: sticky;
           top: 0;
-          z-index: 1000;
+          z-index: 100;
           backdrop-filter: blur(10px);
           background: transparent;
           border-bottom: none;
@@ -326,20 +287,15 @@ st.markdown("""
         box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
     }
     
-    /* Result Card - Glassmorphism */
+    /* Result Card */
       .card {
-        background: rgba(255, 255, 255, 0.25);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.18);
+        background: white;
         border-radius: 20px;
         padding: 24px;
         margin: 1.5rem auto;
         max-width: 720px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
         animation: fadeIn 0.4s ease-out;
-        position: relative;
-        z-index: 100;
     }
     
     @keyframes fadeIn {
@@ -489,13 +445,10 @@ st.markdown("""
     }
     
       .alt-card {
-        background: rgba(255, 255, 255, 0.2);
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
-        border: 1px solid rgba(255, 255, 255, 0.15);
+        background: white;
         border-radius: 16px;
           overflow: hidden;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
         transition: all 0.3s ease;
         cursor: pointer;
     }
@@ -682,22 +635,6 @@ st.markdown("""
     }
     </style>
 """, unsafe_allow_html=True)
-
-# ---------- Particle Effects ----------
-st.markdown('''
-<div class="particles">
-    <div class="particle"></div>
-    <div class="particle"></div>
-    <div class="particle"></div>
-    <div class="particle"></div>
-    <div class="particle"></div>
-    <div class="particle"></div>
-    <div class="particle"></div>
-    <div class="particle"></div>
-    <div class="particle"></div>
-    <div class="particle"></div>
-</div>
-''', unsafe_allow_html=True)
 
 # ---------- Success Message ----------
 if st.session_state.show_success:
