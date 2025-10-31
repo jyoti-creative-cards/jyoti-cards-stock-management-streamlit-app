@@ -52,6 +52,14 @@ def file_mtime_num(path: str) -> float:
     except Exception:
         return 0.0
 
+def file_signature(path: str) -> tuple[float, int]:
+    """Return (mtime, size) to robustly invalidate cache on data change."""
+    try:
+        stt = os.stat(path)
+        return (stt.st_mtime, stt.st_size)
+    except Exception:
+        return (0.0, 0)
+
 def get_base64_image(image_path: str) -> str | None:
     if not os.path.exists(image_path):
         return None
@@ -120,7 +128,7 @@ def get_stock_status(quantity, condition_value):
 
 # ---------- Data Pipeline ----------
 @st.cache_data(show_spinner=False)
-def build_master_df(_stk_m, _alt_m, _cond_m):
+def build_master_df(_stk_sig, _alt_sig, _cond_sig):
     """Build master dataframe with caching for performance"""
     # Website Stock
     df_stk_sum = pd.read_excel(stk_sum_file, usecols=[0, 2])
@@ -169,10 +177,10 @@ def build_master_df(_stk_m, _alt_m, _cond_m):
 
 # ---------- Load Data ----------
 with st.spinner('⏳ Loading data...'):
-    stk_m = file_mtime_num(stk_sum_file)
-    alt_m = file_mtime_num(alternate_list_file)
-    cond_m = file_mtime_num(condition_file)
-    master_df = build_master_df(stk_m, alt_m, cond_m)
+    stk_sig = file_signature(stk_sum_file)
+    alt_sig = file_signature(alternate_list_file)
+    cond_sig = file_signature(condition_file)
+    master_df = build_master_df(stk_sig, alt_sig, cond_sig)
     alt_df = master_df[['ITEM NO.', 'Alt1', 'Alt2', 'Alt3']].copy()
 
 # ---------- Modern Styling ----------
