@@ -30,7 +30,7 @@ MASTER_DF_OUT = 'data/master_df.xlsx'
 
 # ====== OFFER BANNER ======
 OFFER_ENABLED = True
-OFFER_TEXT = "🎉 New arrivals now available"
+OFFER_TEXT = "🎉 ज्योति कार्ड्स की वेबसाइट पर आपका स्वागत है "
 
 # ---------- Initialize Session State ----------
 if 'search_history' not in st.session_state:
