@@ -5,7 +5,12 @@ import pytz
 import base64
 import re
 import sqlite3
+import json
+import urllib.request
+import urllib.error
+from typing import Optional
 from urllib.parse import quote
+from sqlalchemy import create_engine, text
 
 # ---------- Page + Theme ----------
 st.set_page_config(
@@ -19,10 +24,56 @@ st.set_page_config(
 
 # ---------- Constants ----------
 tz = pytz.timezone('Asia/Kolkata')
-DB_PATH = os.environ.get("DB_PATH", "/data/ops.db")
+DEFAULT_DB_PATHS = [
+    os.environ.get("DB_PATH", ""),
+    os.path.join(os.path.dirname(os.path.dirname(__file__)), "ops.db"),
+    "/data/ops.db",
+]
+DB_PATH = next((p for p in DEFAULT_DB_PATHS if p and os.path.exists(p)), "/data/ops.db")
+DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
 phone_number = "07312506986"
-whatsapp_phone = "919516789702"
-wa_order_phone = "917694812345"
+META_ACCESS_TOKEN = os.environ.get("META_ACCESS_TOKEN", "").strip()
+META_PHONE_NUMBER_ID = os.environ.get("META_PHONE_NUMBER_ID", "").strip()
+META_API_VERSION = os.environ.get("META_API_VERSION", "v25.0").strip() or "v25.0"
+
+
+def _normalize_wa_number(raw: str) -> str:
+    digits = "".join(ch for ch in str(raw or "") if ch.isdigit())
+    if digits.startswith("00"):
+        digits = digits[2:]
+    if len(digits) == 10:
+        return f"91{digits}"
+    return digits
+
+
+@st.cache_data(ttl=600)
+def _resolve_meta_whatsapp_number(meta_phone_number_id: str, meta_access_token: str, meta_api_version: str) -> str:
+    if not meta_phone_number_id or not meta_access_token:
+        return ""
+    url = f"https://graph.facebook.com/{meta_api_version}/{meta_phone_number_id}?fields=display_phone_number"
+    req = urllib.request.Request(
+        url,
+        headers={"Authorization": f"Bearer {meta_access_token}"},
+        method="GET",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            payload = json.loads(resp.read().decode("utf-8"))
+            return _normalize_wa_number(payload.get("display_phone_number", ""))
+    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, json.JSONDecodeError):
+        return ""
+
+
+# Use Meta phone-number-id bound WhatsApp number for customer chat links.
+_meta_wa_number = _resolve_meta_whatsapp_number(META_PHONE_NUMBER_ID, META_ACCESS_TOKEN, META_API_VERSION)
+_wa_default = (
+    _meta_wa_number
+    or _normalize_wa_number(os.environ.get("WA_ORDER_PHONE", ""))
+    or _normalize_wa_number(os.environ.get("BUSINESS_WHATSAPP_NUMBER", ""))
+    or "918952839355"
+)
+whatsapp_phone = _wa_default
+wa_order_phone = _wa_default
 logo_path = 'images/jyoti logo-1.png'
 
 # ====== OFFER BANNER ======
@@ -36,7 +87,9 @@ if 'show_success' not in st.session_state:
     st.session_state.show_success = None
 
 # ---------- Helper Functions ----------
-def db_mtime() -> datetime.datetime | None:
+def db_mtime() -> Optional[datetime.datetime]:
+    if DATABASE_URL:
+        return datetime.datetime.now(tz)
     try:
         ts = os.path.getmtime(DB_PATH)
         return datetime.datetime.fromtimestamp(ts, tz)
@@ -44,13 +97,16 @@ def db_mtime() -> datetime.datetime | None:
         return None
 
 def db_signature() -> tuple[float, int]:
+    if DATABASE_URL:
+        now = datetime.datetime.now(tz)
+        return (float(int(now.timestamp() // 60)), 1)
     try:
         stt = os.stat(DB_PATH)
         return (stt.st_mtime, stt.st_size)
     except Exception:
         return (0.0, 0)
 
-def get_base64_image(image_path: str) -> str | None:
+def get_base64_image(image_path: str) -> Optional[str]:
     if not os.path.exists(image_path):
         return None
     with open(image_path, 'rb') as f:
@@ -72,7 +128,7 @@ def _digits(s: str) -> str:
     return d.lstrip('0') or d
 
 @st.cache_data(ttl=3600)
-def get_image_path(item_no: str) -> str | None:
+def get_image_path(item_no: str) -> Optional[str]:
     """Primary: images/{sku}.jpeg; fallback: recursive search by digits."""
     if not item_no:
         return None
@@ -135,22 +191,49 @@ def get_stock_status(quantity, reorder_level):
 # ---------- SQLite Data Pipeline ----------
 @st.cache_data(show_spinner=False)
 def load_inventory(_sig):
-    """Load product+inventory joined rows from SQLite."""
+    """Load product+inventory rows from DB."""
     rows_out = []
     try:
-        conn = sqlite3.connect(DB_PATH)
-        conn.row_factory = sqlite3.Row
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT p.id, p.sku, p.name, p.description, p.image_url, p.category,
-                   p.reorder_level,
-                   COALESCE(i.quantity, 0) AS quantity
-            FROM products p
-            LEFT JOIN inventory i ON i.product_id = p.id
-        """)
-        for r in cur.fetchall():
-            rows_out.append(dict(r))
-        conn.close()
+        if DATABASE_URL:
+            engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+            query = text(
+                """
+                SELECT p.id,
+                       p.sku,
+                       p.name,
+                       p.website_description AS description,
+                       p.image_path,
+                       p.category,
+                       p.reorder_level,
+                       COALESCE(i.quantity_available, 0) AS quantity
+                FROM products p
+                LEFT JOIN inventory i ON i.product_id = p.id
+                WHERE COALESCE(p.active, TRUE) = TRUE
+                """
+            )
+            with engine.connect() as conn:
+                for r in conn.execute(query).mappings():
+                    rows_out.append(dict(r))
+        else:
+            conn = sqlite3.connect(DB_PATH)
+            conn.row_factory = sqlite3.Row
+            cur = conn.cursor()
+            cur.execute("""
+                SELECT p.id,
+                       p.sku,
+                       p.name,
+                       p.website_description AS description,
+                       p.image_path,
+                       p.category,
+                       p.reorder_level,
+                       COALESCE(i.quantity_available, 0) AS quantity
+                FROM products p
+                LEFT JOIN inventory i ON i.product_id = p.id
+                WHERE COALESCE(p.active, 1) = 1
+            """)
+            for r in cur.fetchall():
+                rows_out.append(dict(r))
+            conn.close()
     except Exception as e:
         st.error(f"⚠️ Database error: {e}")
     return rows_out
